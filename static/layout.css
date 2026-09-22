@@ -1,0 +1,440 @@
+/* Reference composition and instrument cards. */
+:root {
+  --dashboard-top: clamp(310px, 41vh, 420px);
+  --dashboard-band: 52px;
+  --dashboard-bottom: clamp(190px, 25vh, 245px);
+  --drive-instrument-size: min(clamp(150px, 13vw, 188px), calc(var(--dashboard-bottom) - 56px));
+}
+.music-dashboard { min-height: 535px; display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); grid-template-rows: 1fr auto; gap: 1px; padding: 0; background: var(--line); }
+.music-portal { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: clamp(20px, 3vw, 44px); background: #0b0e0b; }
+.music-portal strong { margin: 28px 0 12px; font: 900 clamp(28px, 3.5vw, 58px)/1.05 Arial, sans-serif; overflow-wrap: anywhere; }
+.music-portal > span:not(.label) { color: var(--muted); font: 14px monospace; }
+.music-portal > .music-station { margin-top: 18px; color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.music-portal small { margin-top: 28px; color: var(--accent); font: 9px monospace; letter-spacing: 1px; }
+.music-spectrum { height: 92px; display: flex; align-items: end; gap: clamp(3px, .55vw, 9px); margin-top: 28px; padding: 10px; border: 1px solid var(--line); background: linear-gradient(#10160f, #090c09); }
+.music-spectrum i { flex: 1; min-height: 3px; height: calc(100% * var(--level, 0)); background: linear-gradient(to top, var(--accent), #ffd271); box-shadow: 0 0 8px #f2993a66; transition: height 120ms linear; }
+.music-portal.joy-section-focus { position: relative; outline: 3px solid var(--accent); outline-offset: -8px; box-shadow: inset 0 0 30px #f2993a22; }
+.music-provider, .music-now, .music-hint { background: #0b0e0b; padding: clamp(24px, 4vw, 58px); }
+.music-provider, .music-now { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.music-provider strong { margin: 24px 0 10px; color: var(--accent); font: bold clamp(25px, 3.5vw, 48px) monospace; overflow-wrap: anywhere; }
+.music-provider small { color: var(--muted); font: 9px monospace; letter-spacing: 1px; }
+.music-now strong { margin-top: 28px; font: 900 clamp(34px, 5vw, 76px)/1.05 Arial, sans-serif; overflow-wrap: anywhere; }
+.music-now > span:not(.label) { margin-top: 13px; color: var(--muted); font: 17px monospace; }
+.music-progress { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--accent); font: bold 12px monospace; letter-spacing: 1px; }
+.music-settings { display: flex; flex-wrap: wrap; gap: 12px 28px; margin-top: 14px; color: var(--muted); font: 10px monospace; letter-spacing: 1px; }
+.music-settings b { color: var(--text); font-weight: normal; }
+.music-hint { grid-column: 1 / -1; padding-block: 15px; color: var(--text); font: bold 11px monospace; letter-spacing: 1px; }
+.music-hint span { color: var(--muted); font-size: 9px; font-weight: normal; }
+@media(max-width:700px) { .music-dashboard { grid-template-columns: 1fr; grid-template-rows: minmax(320px, 1fr) minmax(145px, auto) auto; } .music-hint { grid-column: 1; } }
+.shell { max-width: 1700px; padding: 0 20px; }
+header { position: relative; height: 82px; display: grid; grid-template-columns: 245px minmax(280px, 1fr) 190px 86px; gap: 16px; }
+.brand { width: 245px; height: 76px; background-size: 479px auto; background-position: -13px -64px; }
+.identity { display: none; }
+nav { margin: 8px 0; align-self: stretch; justify-content: center; gap: 12px; border: 1px solid #34382f; }
+nav button { flex: 1; padding: 0 13px; font-size: 17px; letter-spacing: 2px; }
+nav button.joy-focus { outline-offset: -5px; outline-color: #6e7468; }
+.demo { position: absolute; right: 0; top: 88px; max-width: none; display: flex; align-items: center; gap: 12px; font-size: 8px; letter-spacing: 1px; }
+.demo span { margin: 0; font-size: 7px; }
+.header-sources { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; gap: 8px; margin: 0; font-size: 0; text-align: center; }
+.header-sources b { display: block; margin: 0; font-size: 6px; color: var(--muted); overflow-wrap: normal; white-space: nowrap; }
+.header-sources b::before { content: attr(data-source); display: block; text-transform: uppercase; font: bold 11px monospace; letter-spacing: 1px; color: var(--text); margin-bottom: 7px; }
+.header-sources b.source-connected::before { color: #79c56d; }
+.header-sources > span { display: none; }
+header time { min-width: 0; white-space: nowrap; border-left: 1px solid var(--line); padding-left: 14px; font-size: 24px; }
+.section-line { height: 28px; }
+.section-line > span { display: none; }
+h1 { font-size: 9px; }
+.workspace, .dashboard {
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: var(--dashboard-top) var(--dashboard-band) var(--dashboard-bottom);
+  gap: 0;
+}
+.dashboard { grid-column: 1 / -1; grid-row: 1 / 4; }
+.panel { border: 0; background: linear-gradient(110deg, #0b0e0bec, #0b0e0bc2); padding: 14px; }
+.label { font-size: 9px; letter-spacing: 2px; }
+.drive-main { position: relative; grid-column: 9 / 15; grid-row: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; background: none; }
+.drive-main > .label { position: absolute; top: 4px; right: 14px; left: 14px; font-size: 7px; opacity: .75; }
+.primary-gauges { display: contents; }
+.speed-gauge, .rpm-gauge { grid-row: 1; justify-self: center; align-self: center; width: var(--drive-instrument-size); max-width: 100%; margin: 0; }
+.speed-gauge { grid-column: 1; }
+.rpm-gauge { grid-column: 2; }
+.speed-gauge .gauge-readout, .rpm-gauge .gauge-readout { padding-top: 8px; gap: 6px; }
+.speed-gauge .gauge-readout > span, .rpm-gauge .gauge-readout > span { font-size: 10px; }
+.speed-gauge .gauge-readout strong, .rpm-gauge .gauge-readout strong { font-family: 'Arial Black', 'DejaVu Sans', sans-serif; font-size: clamp(38px, 3.7vw, 58px); font-weight: 900; letter-spacing: -3px; }
+.speed-gauge .gauge-readout small, .rpm-gauge .gauge-readout small { font-size: 11px; }
+.drive-location { grid-column: 9 / 15; grid-row: 3; z-index: 1; width: 50%; justify-self: end; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border: 0; }
+.drive-location .compass-dial { width: var(--drive-instrument-size); height: var(--drive-instrument-size); flex-shrink: 0; }
+.drive-location .compass-dial .bearing { font-size: clamp(25px, 2.1vw, 33px); }
+.drive-location .heading-label { display: none; }
+.drive-location .compass-needle { inset: 20px; font-size: 16px; }
+.drive-location .compass-dial > span { font-size: 9px; }
+.drive-location .location { width: min(100%, var(--drive-instrument-size)); padding: 0; }
+.drive-location .altitude { justify-content: center; gap: 8px; }
+.drive-location .altitude strong { font-size: 19px; }
+.altitude [data-altitude-label].altitude-from-baro { color: #e5b271; }
+.altitude [data-altitude-label].altitude-from-gps { color: #79c56d; }
+.drive-location .coordinates { display: none; }
+.drive-location .location > span { display: none; }
+.drive-health { grid-column: 9 / 16; grid-row: 2; align-self: stretch; padding: 5px 10px; border-block: 1px solid var(--line); }
+.drive-health > .label { font-size: 7px; }
+.health-gauges { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; height: 30px; margin: 2px 0 0; }
+.health-gauges .round-gauge, .health-gauges .round-gauge:last-child { grid-column: auto; width: 100%; max-width: none; margin: 0; padding: 0 5px; aspect-ratio: auto; }
+.health-gauges .round-gauge + .round-gauge { border-left: 1px solid var(--line); }
+.health-gauges svg { display: none; }
+.health-gauges .gauge-readout { position: static; height: 100%; justify-content: start; gap: 0; padding: 0; }
+.health-gauges .gauge-readout strong { font-size: 16px; line-height: 1; }
+.health-gauges .gauge-readout > span { font-size: 6px; letter-spacing: .5px; }
+.health-gauges .gauge-readout small { font-size: 7px; letter-spacing: .5px; }
+.drive-summary { grid-column: 16 / 21; grid-row: 2; border-block: 1px solid var(--line); display: flex; align-items: center; justify-content: center; padding: 4px 10px; }
+.drive-summary .vehicle-state { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 7px; letter-spacing: .7px; }
+.drive-summary .vehicle-state strong { font-size: 12px; }
+.drive-summary .source-note { display: none; }
+.drive-secondary { grid-column: 15 / 21; grid-row: 3; padding: 8px 14px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.drive-secondary > .label { display: none; }
+.drive-secondary .imu-label { display: none; }
+.compact-orientation { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr auto; width: 50%; gap: 5px; height: calc(var(--dashboard-bottom) - 28px); align-items: center; justify-items: center; }
+.compact-orientation .horizon { width: var(--drive-instrument-size); height: var(--drive-instrument-size); max-width: 100%; max-height: none; }
+.compact-orientation .angles { display: flex; gap: 22px; align-items: center; }
+.compact-orientation .angles .metric strong { font-size: 21px; }
+.attitude-location { display: none; }
+.attitude-location > div { display: flex; align-items: baseline; gap: 5px; }
+.attitude-location span { font-size: 7px; color: var(--muted); letter-spacing: 1px; }
+.attitude-location strong { font: 19px monospace; }
+.attitude-location small { font-size: 9px; color: var(--accent); }
+.map-panel { grid-column: 1 / 9; grid-row: 1 / 4; margin: 0 12px 0 0; border: 1px solid var(--line); padding: 0; }
+body[data-mode=adventure] .map-panel { grid-column: 5 / 15; grid-row: 1 / 3; margin: 0 0 8px; }
+.map-toolbar { gap: 4px; padding: 4px; min-height: 32px; }
+.map-toolbar button { padding: 5px; min-height: 25px; font-size: 7px; }
+.map-status { font-size: 7px; min-height: 22px; }
+.adventure-info { grid-column: 1 / 5; grid-row: 1 / 3; border: 1px solid var(--line); margin: 0 0 8px; padding: 16px; display: flex; flex-direction: column; }
+.adventure-info .location { padding-top: 24px; }
+.adventure-info .altitude { display: flex; flex-direction: column; gap: 10px; }
+.adventure-info .altitude strong { font-size: 28px; }
+.adventure-info .coordinates { display: flex; flex-direction: column; font-size: 13px; gap: 20px; margin: 25px 0; }
+.adventure-info .coordinates div > span:first-child { font-size: 8px; margin-bottom: 8px; letter-spacing: 2px; }
+.adventure-info .sundown { margin-top: auto; padding: 20px 0 4px; border-bottom: 0; }
+.adventure-info .sundown > strong { font-size: clamp(22px, 2.4vw, 34px); margin: 14px 0; }
+.adventure-info .sundown > small { line-height: 1.5; font-size: 8px; }
+.adventure-secondary { grid-column: 15 / 21; grid-row: 1 / 4; padding: 12px 10px; display: flex; flex-direction: column; border-left: 1px solid var(--line); margin-bottom: 8px; }
+.adventure-performance { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 10px 12px; border-bottom: 1px solid var(--line); }
+.adventure-performance .round-gauge { width: 100%; max-width: 125px; justify-self: center; }
+.adventure-performance .gauge-readout strong { font-size: clamp(25px, 2.4vw, 40px); }
+.adventure-performance .gauge-readout > span { font-size: 9px; }
+.adventure-performance .gauge-readout small { font-size: 10px; }
+.adventure-performance .gauge-labels { display: none; }
+.adventure-secondary > .label { margin: 14px 6px; font-size: 8px; }
+.environment-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 6px 14px; }
+.environment-meters .metric:last-child { grid-column: auto; }
+.environment-meters .metric .label { font-size: 7px; letter-spacing: 1px; }
+.environment-meters .metric strong, .environment-meters .metric:last-child strong { font-size: 22px; }
+.environment-meters .metric small { font-size: 9px; }
+.adventure-health { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; border-top: 1px solid var(--line); padding: 12px 3px 0; margin-top: auto; }
+.adventure-health .gauge-labels { display: none; }
+.adventure-health .gauge-readout > span { font-size: 7px; letter-spacing: 1px; }
+.adventure-health .gauge-readout strong { font-size: 22px; }
+.adventure-health .gauge-readout small { font-size: 9px; }
+.adventure-health .gauge-readout { gap: 3px; }
+.adventure-main { grid-column: 1 / 15; grid-row: 3; padding: 0; border-top: 1px solid var(--line); }
+.adventure-main > .label { display: none; }
+.trail-orientation { display: grid; grid-template-columns: 28.57% 42.86% 28.57%; height: 100%; gap: 0; }
+.trail-compass, .trail-attitude, .trail-position { height: 100%; padding: 10px 14px; min-width: 0; border-right: 1px solid var(--line); }
+.trail-compass { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; }
+.trail-compass > .label { align-self: stretch; font-size: 8px; }
+.trail-compass .compass-dial { width: clamp(145px, 18vh, 185px); height: clamp(145px, 18vh, 185px); }
+.trail-compass .bearing { font-size: 33px; }
+.trail-attitude { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 13px 1fr; gap: 3px 10px; align-items: center; }
+.trail-attitude > .label { grid-column: 1 / -1; font-size: 8px; }
+.trail-attitude .horizon { width: 100%; height: calc(var(--dashboard-bottom) - 39px); max-width: none; }
+.trail-attitude .angles { flex-direction: column; gap: 16px; }
+.trail-attitude .angles .metric strong { font-size: 26px; }
+.imu-label.tilt-caution { color: #f4c34e; }
+.imu-label.tilt-alarm { color: #ff756d; }
+canvas.navball[data-tilt-alert="caution"] { filter: drop-shadow(0 0 8px #f4c34eaa); }
+canvas.navball[data-tilt-alert="alarm"] { animation: tilt-alarm-pulse .75s steps(2, end) infinite; filter: drop-shadow(0 0 10px #ef554dcc); }
+@keyframes tilt-alarm-pulse { 50% { opacity: .58; } }
+.trail-position { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.trail-position > strong { font: 25px monospace; }
+.trail-position > strong + .label { border-top: 1px solid var(--line); padding-top: 14px; }
+.trail-position small { font: 11px Arial; color: var(--accent); margin-left: 6px; }
+.camp-placeholder { min-height: calc(var(--dashboard-top) + var(--dashboard-band) + var(--dashboard-bottom)); }
+.joystick-strip { margin-top: 0; min-height: 24px; }
+.event-strip { padding: 6px 0; font-size: 8px; }
+footer { min-height: 50px; gap: 12px; }
+.footer-brand { font-size: 20px; font-weight: 900; color: var(--muted); letter-spacing: -1px; }
+.footer-brand small { display: block; font-size: 6px; letter-spacing: 1.7px; margin-top: 3px; }
+.footer-tagline { margin: 0 auto; font-size: 8px; letter-spacing: 4px; color: var(--muted); text-align: center; }
+.footer-tagline span { display: block; width: 25px; height: 2px; background: var(--accent); margin: 10px auto 0; }
+.joy-section-focus, .joy-footer-focus { outline: 2px solid var(--accent) !important; outline-offset: -3px; box-shadow: 0 0 22px #f2993a44, inset 0 0 0 1px #f2993a88; }
+.detail-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 22px; background: #050706c9; backdrop-filter: blur(5px); }
+.detail-window { position: relative; width: min(620px, 94vw); min-height: 250px; padding: 34px 42px 38px; border: 1px solid var(--accent); background: radial-gradient(ellipse at 50% 0, #24261dcc, #0c100df5 70%); box-shadow: 0 18px 70px #000c, inset 0 0 0 1px #f2993a33; }
+body.detail-module-open .detail-window { width: min(1180px, 96vw); min-height: min(78vh, 760px); padding: 34px 24px 24px; }
+.detail-module-panel { grid-column: auto !important; grid-row: auto !important; width: 100%; min-height: min(58vh, 560px); margin: 0 !important; }
+.detail-module-panel.round-gauge { width: min(440px, 68vw); min-height: 0; margin: auto !important; }
+.detail-module-panel #street-map { height: 100%; }
+.detail-module-panel canvas.navball,
+.detail-module-panel .horizon.navball { width: min(70vh, 520px) !important; height: min(70vh, 520px) !important; max-width: none !important; max-height: none !important; }
+.detail-module-panel .compact-orientation { height: auto !important; min-height: min(62vh, 600px); align-items: center; }
+.camp-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 52vh; padding-block: 32px; text-align: center; }
+.camp-placeholder h2 { margin: 0; color: var(--text); font-size: clamp(28px, 5vw, 52px); }
+.camp-placeholder p { margin: 0; color: var(--muted); }
+.ambient-calibration { width: min(860px, 100%); border: 1px solid var(--line); padding: 18px; text-align: left; background: #0d120e; }
+.ambient-calibration > div:first-child { display: grid; gap: 8px; }
+.ambient-calibration strong { color: var(--text); font: bold clamp(20px, 3vw, 32px) monospace; letter-spacing: 1px; }
+.ambient-calibration small { color: var(--muted); font: 9px monospace; line-height: 1.5; }
+.ambient-capture-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.ambient-capture-actions button { min-height: 54px; border: 1px solid #65725d; background: #162016; color: #b9caae; font: bold 10px monospace; letter-spacing: 1px; }
+.ambient-capture-actions button[data-ambient-capture="dusk"] { border-color: #b27b48; color: #e5b271; }
+.ambient-capture-actions button[data-ambient-capture="night"] { border-color: #536e94; color: #92b7eb; }
+.ambient-calibration-log { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 15px 0 0; padding: 0; list-style: none; }
+.ambient-calibration-log li { min-height: 48px; padding: 8px; border-left: 2px solid var(--line); color: var(--muted); font: 8px/1.45 monospace; }
+.ambient-calibration-log b { display: block; color: var(--text); font-size: 9px; letter-spacing: 1px; }
+@media(max-width:540px) {
+  .ambient-capture-actions, .ambient-calibration-log { grid-template-columns: 1fr; }
+  .ambient-calibration-log { max-height: 220px; overflow-y: auto; }
+}
+.system-actions { display: grid; grid-template-columns: repeat(2, minmax(190px, 280px)); gap: 14px; justify-content: center; }
+.system-actions button { min-height: 88px; border: 1px solid var(--accent); background: #24180f; color: var(--accent); font: bold 13px monospace; letter-spacing: 1px; }
+.system-actions button:last-child { border-color: #d26b50; background: #281310; color: #ee8c70; }
+.system-actions button:disabled { opacity: .55; }
+.system-status { min-height: 18px; color: var(--muted); font: 10px monospace; letter-spacing: 1px; }
+.detail-close { position: absolute; top: 9px; right: 14px; border: 0; background: transparent; color: var(--muted); font-size: 28px; line-height: 1; }
+.detail-kicker { color: var(--accent); font: 9px monospace; letter-spacing: 2px; }
+.detail-window h2 { margin: 12px 0 22px; color: var(--text); font-size: clamp(24px, 4vw, 42px); letter-spacing: 2px; }
+.detail-controls { display: flex; flex-wrap: wrap; gap: 7px; margin: -10px 0 16px; }
+.detail-controls button { min-height: 34px; border: 1px solid var(--line); background: #171c16; color: var(--muted); padding: 0 11px; font: bold 9px monospace; letter-spacing: .7px; }
+.detail-controls button.joy-detail-focus { border-color: var(--accent); color: var(--accent); outline: 2px solid var(--accent); outline-offset: -3px; box-shadow: 0 0 18px #f2993a44; }
+.detail-window p { max-width: 510px; color: var(--muted); line-height: 1.65; font-size: 13px; }
+.detail-number { color: var(--text); font: bold clamp(52px, 9vw, 92px) monospace; letter-spacing: -5px; }
+.detail-number small { color: var(--accent); font: 14px Arial; letter-spacing: 1px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 30px; color: var(--muted); font: 10px monospace; letter-spacing: 1.5px; }
+.detail-grid strong { display: block; color: var(--text); font-size: 25px; margin-top: 5px; letter-spacing: 0; }
+.calibration-ball { width: 92px; height: 92px; display: grid; place-items: center; margin: 0 auto 18px; border-radius: 50%; border: 1px solid #7c8476; color: var(--accent); background: radial-gradient(circle at 35% 28%, #4a9ab4, #1d536b 47%, #70432b 49%, #432316 80%); font: 9px monospace; box-shadow: inset -12px -12px 18px #0008, 0 0 0 6px #111814; }
+.calibration-note { font-size: 10px !important; margin-top: 20px; }
+body.detail-open { overflow: hidden; }
+@media(min-width:1450px) {
+  header { grid-template-columns: 270px 135px minmax(320px, 1fr) 220px 90px; height: 94px; }
+  .brand { width: 270px; height: 86px; background-size: 530px auto; background-position: -15px -71px; }
+  .identity { display: block; font-size: 9px; padding-left: 16px; }
+  .demo { top: 99px; }
+  .adventure-info { padding: 22px; }
+}
+@media(min-width:901px) and (max-width:1100px) {
+  .shell { padding: 0 10px; }
+  header { grid-template-columns: 200px minmax(240px, 1fr) 150px 78px; gap: 8px; }
+  .brand { width: 200px; background-size: 405px auto; background-position: -11px -54px; }
+  nav { gap: 0; }
+  nav button { font-size: 13px; padding: 0 8px; }
+  .drive-location { gap: 8px; padding-left: 0; }
+  .drive-location .compass-dial { width: 73px; height: 73px; }
+  .drive-location .coordinates { flex-direction: column; }
+  .drive-location .altitude strong { font-size: 14px; }
+  .adventure-info { padding: 12px; }
+  .adventure-info .coordinates { font-size: 11px; }
+  .environment-meters .metric strong, .environment-meters .metric:last-child strong { font-size: 18px; }
+  .environment-meters .metric small { font-size: 8px; margin-left: 2px; }
+  .environment-meters .metric .label { font-size: 6px; }
+  .trail-compass .compass-dial { width: 140px; height: 140px; }
+  .trail-attitude { gap: 4px; padding-inline: 7px; }
+  .trail-attitude .angles .metric strong { font-size: 22px; }
+  .trail-position { padding-inline: 10px; }
+  .trail-position > strong { font-size: 21px; }
+  .compact-orientation { gap: 4px; }
+  .compact-orientation .angles { gap: 10px; }
+  .compact-orientation .angles .metric strong { font-size: 22px; }
+  .attitude-location span { font-size: 6px; }
+}
+@media(max-width:900px) {
+  header { grid-template-columns: 220px minmax(0, 1fr) 64px; grid-template-rows: 76px 48px; height: 124px; gap: 0 10px; }
+  .brand { width: 220px; }
+  .header-sources { grid-column: 2; grid-row: 1; width: auto; margin: 0; }
+  header time { grid-column: 3; grid-row: 1; }
+  nav { grid-column: 1 / -1; grid-row: 2; order: 0; height: auto; width: auto; margin: 0; }
+  .demo { top: 131px; gap: 6px; font-size: 7px; }
+  .demo span { font-size: 6px; }
+  .workspace, .dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 320px 52px 220px 245px; }
+  .dashboard { grid-column: 1 / -1; grid-row: 1 / 5; }
+  .drive-main { grid-column: 1 / -1; grid-row: 1; grid-template-columns: 40% 60%; grid-template-rows: 34% 66%; padding: 0 8px 0 0; }
+  .drive-main > .label { right: 20px; left: 10px; }
+  .speed-gauge { grid-column: 2; grid-row: 1 / 3; width: min(100%, var(--dashboard-top)); }
+  .rpm-gauge { grid-column: 1; grid-row: 2; justify-self: end; align-self: end; width: min(82%, 228px); }
+  .speed-gauge .gauge-readout { padding-top: 12px; gap: 12px; }
+  .speed-gauge .gauge-readout > span { font-size: 15px; }
+  .speed-gauge .gauge-readout strong { font-size: clamp(70px, 8vw, 110px); letter-spacing: -6px; }
+  .speed-gauge .gauge-readout small { font-size: 16px; }
+  .rpm-gauge .gauge-readout strong { font-size: clamp(34px, 3.3vw, 50px); letter-spacing: -2px; }
+  .rpm-gauge .gauge-readout > span { font-size: 12px; }
+  .drive-location { grid-column: 1; grid-row: 1; align-self: center; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 14px 8px 0; border: 0; }
+  .drive-location .compass-dial { width: 73px; height: 73px; }
+  .drive-location .compass-dial .bearing { left: 14%; right: 14%; bottom: 11%; min-height: 35%; font-size: 18px; }
+  .drive-location .compass-needle { inset: 14px; font-size: 9px; }
+  .drive-location .compass-dial > span { font-size: 7px; }
+  .drive-location .location { width: auto; }
+  .drive-location .altitude { justify-content: space-between; flex-wrap: wrap; gap: 3px; }
+  .drive-location .altitude strong { font-size: 17px; }
+  .drive-location .coordinates { display: flex; margin: 5px 0 0; font-size: 9px; gap: 8px; }
+  .drive-summary { grid-column: 1 / -1; grid-row: 2; padding-inline: 12px; }
+  .drive-summary .source-note { font-size: 8px; }
+  .drive-summary .vehicle-state { font-size: 8px; gap: 12px; }
+  .drive-summary .vehicle-state strong { font-size: 13px; }
+  .drive-health { grid-column: 1; grid-row: 4; align-self: stretch; border: 1px solid var(--line); padding: 18px 10px; }
+  .drive-health > .label { font-size: 9px; }
+  .health-gauges { height: auto; margin: 20px 0; }
+  .health-gauges svg { display: block; }
+  .health-gauges .round-gauge { aspect-ratio: 1; }
+  .health-gauges .gauge-readout { position: absolute; height: auto; justify-content: center; gap: 4px; padding: 8px 0 0; }
+  .health-gauges .gauge-readout strong { font-size: clamp(20px, 2.2vw, 30px); }
+  .health-gauges .gauge-readout > span { font-size: 7px; letter-spacing: 1px; }
+  .health-gauges .gauge-readout small { font-size: 9px; letter-spacing: 1px; }
+  .drive-secondary { grid-column: 2; grid-row: 4; padding: 16px; }
+  .drive-secondary > .label { display: flex; }
+  .compact-orientation { grid-template-columns: 1fr 1fr; grid-template-rows: none; width: 100%; gap: 8px; height: 155px; justify-items: stretch; }
+  .compact-orientation .horizon { width: 100%; height: 150px; max-width: none; max-height: 150px; }
+  .attitude-location { display: flex; justify-content: center; border-top: 1px solid var(--line); padding-top: 9px; }
+    .map-panel { grid-column: 1; grid-row: 3; margin: 10px 0; }
+  body[data-mode=adventure] .map-panel { grid-column: 1 / -1; grid-row: 1 / 3; margin: 0; }
+  .adventure-info { grid-column: 1; grid-row: 3; margin: 0; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .adventure-info > .label { grid-column: 1 / -1; }
+  .adventure-info .location { padding-top: 0; }
+  .adventure-info .coordinates { font-size: 10px; gap: 8px; margin: 12px 0 8px; }
+  .adventure-info .coordinates div > span:first-child { margin-bottom: 3px; font-size: 7px; }
+  .adventure-info .altitude strong { font-size: 21px; }
+  .adventure-info .sundown { margin: 0; padding: 10px 0 0; border: 0; }
+  .adventure-info .sundown > strong { font-size: 21px; }
+  .adventure-info .sundown .label { font-size: 8px; }
+  .adventure-secondary { grid-column: 1; grid-row: 4; display: flex; margin: 0; padding: 8px; }
+  .adventure-performance { display: none; }
+  .adventure-secondary > .label { margin: 9px 4px 14px; }
+  .environment-meters { grid-row: auto; }
+  .adventure-health { padding-top: 5px; }
+  .adventure-health .round-gauge { max-width: 115px; justify-self: center; width: 100%; }
+  .adventure-main { grid-column: 2; grid-row: 4; }
+  .trail-orientation { grid-template-columns: 42% 58%; height: 100%; }
+  .trail-position { display: none; }
+  .trail-compass, .trail-attitude { padding: 12px 7px; }
+  .trail-compass { justify-content: center; gap: 15px; }
+  .trail-compass .compass-dial { width: 112px; height: 112px; }
+  .trail-compass .bearing { font-size: 27px; }
+  .trail-attitude { grid-template-columns: 1fr; grid-template-rows: 13px 1fr auto; }
+  .trail-attitude .horizon { height: 130px; }
+  .trail-attitude .angles { flex-direction: row; gap: 12px; }
+  .trail-attitude .angles .metric strong { font-size: 23px; }
+  .trail-compass > .label, .trail-attitude > .label { font-size: 7px; letter-spacing: 1px; }
+  .joystick-strip { padding: 6px 0; }
+}
+@media(max-width:540px) {
+  .shell { padding: 0 8px; }
+  header { grid-template-columns: 180px minmax(0, 1fr); }
+  .brand { width: 180px; height: 65px; background-size: 370px auto; background-position: -10px -49px; }
+  .header-sources { gap: 4px; }
+  .header-sources b { font-size: 6px; }
+  .header-sources b::before { font-size: 9px; }
+  header time { display: none; }
+  nav button { font-size: 12px; }
+  .demo b { display: none; }
+  .demo span { max-width: 170px; text-align: right; }
+  h1 { font-size: 7px; letter-spacing: 1px; }
+  .workspace, .dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: 320px 52px 260px 210px 240px 250px; }
+  .dashboard { grid-row: 1 / 7; }
+  .drive-main { grid-column: 1; grid-row: 1; grid-template-columns: 38% 62%; grid-template-rows: 44% 56%; padding: 0; }
+  .speed-gauge { width: 100%; }
+  .speed-gauge .gauge-readout strong { font-size: 65px; letter-spacing: -4px; }
+  .speed-gauge .gauge-readout > span { font-size: 10px; }
+  .speed-gauge .gauge-readout small { font-size: 12px; }
+  .rpm-gauge { width: 100%; margin-bottom: 22px; }
+  .rpm-gauge .gauge-readout strong { font-size: 26px; letter-spacing: -1px; }
+  .rpm-gauge .gauge-readout > span { font-size: 8px; }
+  .drive-location { padding: 8px 3px 0; gap: 6px; display: flex; align-items: flex-start; }
+  .drive-location .compass-dial { width: 64px; height: 64px; }
+  .drive-location .compass-dial .bearing { font-size: 14px; }
+  .drive-location .coordinates { flex-direction: column; gap: 7px; }
+  .drive-location .altitude strong { font-size: 16px; }
+  .drive-summary { grid-column: 1; grid-row: 2; padding: 8px; }
+  .drive-summary .vehicle-state { flex-direction: column; align-items: flex-start; gap: 3px; }
+  .drive-summary .source-note { max-width: 150px; font-size: 8px; line-height: 1.5; }
+  .drive-health { grid-column: 1; grid-row: 6; }
+  .drive-secondary { grid-column: 1; grid-row: 5; }
+  .compact-orientation .horizon { height: 150px; }
+    .map-panel { grid-column: 1; grid-row: 3; margin: 8px 0; }
+  body[data-mode=adventure] .map-panel { grid-column: 1; grid-row: 1 / 3; margin: 0; }
+  .adventure-info { grid-column: 1; grid-row: 3; padding: 16px; }
+  .adventure-info .location { grid-column: 1; }
+  .adventure-info .coordinates { font-size: 12px; margin: 16px 0; }
+  .adventure-info .sundown > strong { font-size: 26px; }
+  .adventure-main { grid-column: 1; grid-row: 5; }
+  .adventure-secondary { grid-column: 1; grid-row: 6; }
+  .trail-compass .compass-dial { width: 140px; height: 140px; }
+  .trail-attitude .horizon { height: 145px; }
+  .trail-compass > .label, .trail-attitude > .label { font-size: 8px; }
+  .environment-meters { margin-top: 8px; }
+  .environment-meters .metric strong, .environment-meters .metric:last-child strong { font-size: 24px; }
+  .adventure-health .round-gauge { max-width: 115px; }
+  footer { min-height: 85px; flex-wrap: wrap; }
+  .footer-brand { margin-right: auto; }
+  .footer-tagline { margin: 0; font-size: 6px; letter-spacing: 2px; }
+  .detail-window { padding: 30px 22px 28px; }
+  .detail-grid { gap: 12px; }
+}
+
+/* Rear air suspension stays read-only in both dashboards and module detail. */
+.suspension-card { padding: 10px; border: 1px solid var(--line); min-width: 0; cursor: pointer; }
+.suspension-card > .label { display: flex; justify-content: space-between; gap: 8px; font-size: 8px; letter-spacing: 1px; }
+.suspension-card > .label > span { color: var(--muted); font-size: 7px; }
+.suspension-pressures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0 9px; }
+.suspension-pressures > div { min-width: 0; }
+.suspension-pressures > div > span { display: block; color: var(--muted); font: 8px monospace; letter-spacing: 1px; margin-bottom: 5px; }
+.suspension-pressures strong { display: block; font: bold clamp(19px, 2vw, 29px) monospace; white-space: nowrap; }
+.suspension-card .suspension-pressures small { font: 9px monospace; color: var(--muted); margin: 0; }
+.suspension-status { font: 10px monospace; }
+.suspension-card .suspension-note { display: block; margin: 7px 0 0; color: var(--muted); font: 8px/1.4 monospace; }
+.drive-health .health-gauges { margin: 12px 0; }
+.drive-suspension { position: relative; grid-column: 15 / 21; grid-row: 1; align-self: center; min-height: 230px; margin: 28px 14px 30px; padding: 16px 22px; border-color: #61685f; background: linear-gradient(145deg, #111713f2, #101411e8); box-shadow: inset 0 0 0 1px #242b25; }
+.drive-suspension > .label { padding-bottom: 13px; border-bottom: 1px solid var(--line); color: #c7d7e5; font-size: 13px; letter-spacing: 2px; }
+.drive-suspension > .label > span { display: none; }
+.drive-suspension .suspension-pressures { align-items: center; gap: 0; min-height: 108px; margin: 10px 0; border-bottom: 1px solid var(--line); }
+.drive-suspension .suspension-pressures > div { display: grid; grid-template-columns: 42px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 11px; padding: 8px 14px; }
+.drive-suspension .suspension-pressures > div + div { border-left: 1px solid var(--line); }
+.drive-suspension .suspension-pressures > div::before { content: ""; grid-row: 1 / 3; width: 34px; height: 58px; border: 2px solid #a9c7df; border-radius: 7px; background: linear-gradient(to bottom, transparent 0 28%, #a9c7df 29% 32%, transparent 33% 62%, #a9c7df 63% 66%, transparent 67%); box-shadow: inset 0 8px 0 -6px #a9c7df; opacity: .9; }
+.drive-suspension .suspension-pressures > div > span { align-self: end; margin: 0 0 4px; color: #b7c5d0; font: bold 10px monospace; letter-spacing: 1px; }
+.drive-suspension .suspension-pressures strong { align-self: start; color: var(--accent); font-size: clamp(28px, 2.6vw, 39px); line-height: 1; }
+.drive-suspension .suspension-pressures small { color: #b7c5d0; font-size: 12px; }
+.drive-suspension .suspension-status { position: absolute; top: 18px; right: 22px; color: #75e76c; font-size: 0; text-transform: uppercase; }
+.drive-suspension .suspension-status span { font: bold 9px monospace; letter-spacing: 1px; }
+.drive-suspension .suspension-status span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; vertical-align: -1px; }
+.drive-suspension[data-suspension-state="disconnected"] .suspension-status,
+.drive-suspension[data-suspension-state="unknown"] .suspension-status { color: #9b8171 !important; }
+.drive-suspension .suspension-note { margin: 11px 0 0; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+.adventure-suspension { gap: 0; border-top: 0; border-bottom: 0; }
+.suspension-card.detail-module-panel { display: flex; flex-direction: column; justify-content: center; padding: 28px; cursor: default; }
+.suspension-card.detail-module-panel .suspension-pressures { margin: 35px 0; gap: 30px; }
+.suspension-card.detail-module-panel .suspension-pressures strong { font-size: clamp(30px, 7vw, 88px); }
+.suspension-card.detail-module-panel .suspension-pressures small { font-size: 18px; }
+.suspension-card.detail-module-panel > .label, .suspension-card.detail-module-panel .suspension-status { font-size: 18px; }
+@media(max-width:900px) {
+  body[data-mode=adventure] .workspace, body[data-mode=adventure] .dashboard { grid-template-rows: 320px 52px 220px 390px; }
+  .trail-orientation { grid-template-rows: 245px 145px; }
+  .adventure-suspension { display: flex; grid-column: 1 / -1; height: auto; border-top: 1px solid var(--line); }
+  .drive-health { padding: 10px; }
+  .drive-suspension { position: static; min-height: 0; margin: 0; padding: 10px; border-color: var(--line); box-shadow: none; }
+  .drive-suspension > .label { padding: 0; border: 0; color: var(--muted); font-size: 8px; }
+  .drive-suspension > .label > span { display: inline; }
+  .drive-suspension .suspension-pressures { min-height: 0; margin: 12px 0 9px; border: 0; }
+  .drive-suspension .suspension-pressures > div { display: block; padding: 0; }
+  .drive-suspension .suspension-pressures > div + div { border: 0; }
+  .drive-suspension .suspension-pressures > div::before { display: none; }
+  .drive-suspension .suspension-pressures > div > span { margin-bottom: 5px; font: 8px monospace; }
+  .drive-suspension .suspension-pressures strong { color: var(--text); font-size: clamp(19px, 2vw, 29px); }
+  .drive-suspension .suspension-pressures small { color: var(--muted); font-size: 9px; }
+  .drive-suspension .suspension-status { position: static; color: var(--text); font: 10px monospace; text-transform: none; }
+  .drive-suspension .suspension-status span { font: inherit; letter-spacing: 0; }
+  .drive-suspension .suspension-status span::before { display: none; }
+  .drive-suspension .suspension-note { margin-top: 7px; text-align: left; text-transform: none; letter-spacing: 0; }
+  .drive-health .health-gauges { margin: 8px 0; }
+  .drive-health .health-gauges .round-gauge,
+  .drive-health .health-gauges .round-gauge:last-child { max-width: 85px; justify-self: center; }
+}
+@media(max-width:540px) {
+  body[data-mode=adventure] .workspace, body[data-mode=adventure] .dashboard { grid-template-rows: 320px 52px 260px 210px 390px 250px; }
+}
+@media(min-width:901px) {
+  .drive-health .health-gauges { margin: 2px 0 0; }
+}

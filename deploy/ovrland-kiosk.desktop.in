@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=OVRLand Dashboard
+Comment=Launch OVRLand in a dedicated full-screen window
+Exec=/bin/sh "@OVRLAND_ROOT@/scripts/ovrland-kiosk.sh"
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

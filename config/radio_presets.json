@@ -1,0 +1,143 @@
+[
+  {
+    "id": "open_road",
+    "display_name": "Open Road",
+    "provider": "Radio Paradise",
+    "station_name": "Main Mix",
+    "description": "Eclectic rock, alternative, singer-songwriter, world, and mixed programming.",
+    "primary_url": "http://radioparadise.com/m3u/aac-128.m3u",
+    "fallback_url": "http://stream-tx1.radioparadise.com/aac-64",
+    "low_bandwidth_url": "http://stream-tx1.radioparadise.com/aac-32",
+    "category": "road"
+  },
+  {
+    "id": "pacific_drive",
+    "display_name": "Pacific Drive",
+    "provider": "KEXP",
+    "station_name": "KEXP Seattle",
+    "description": "Independent and alternative radio with human DJs and varied programming.",
+    "primary_url": "https://kexp.streamguys1.com/kexp160.aac",
+    "fallback_url": "https://kexp.streamguys1.com/kexp64.aac",
+    "category": "road"
+  },
+  {
+    "id": "indie_road",
+    "display_name": "Indie Road",
+    "provider": "SomaFM",
+    "station_name": "Indie Pop Rocks!",
+    "description": "Indie pop, indie rock, and alternative.",
+    "primary_url": "https://somafm.com/indiepop.pls",
+    "fallback_url": "https://ice.somafm.com/indiepop",
+    "category": "road"
+  },
+  {
+    "id": "old_highway",
+    "display_name": "Old Highway",
+    "provider": "SomaFM",
+    "station_name": "Left Coast 70s",
+    "description": "Mellow 1970s album rock.",
+    "primary_url": "https://somafm.com/seventies.pls",
+    "fallback_url": "https://ice.somafm.com/seventies",
+    "category": "road"
+  },
+  {
+    "id": "retro_run",
+    "display_name": "Retro Run",
+    "provider": "SomaFM",
+    "station_name": "Underground 80s",
+    "description": "Early-80s synthpop and UK new wave.",
+    "primary_url": "https://somafm.com/u80s.pls",
+    "fallback_url": "https://ice.somafm.com/u80s",
+    "category": "road"
+  },
+  {
+    "id": "backroads",
+    "display_name": "Backroads",
+    "provider": "SomaFM",
+    "station_name": "Boot Liquor",
+    "description": "Americana, roots, and country.",
+    "primary_url": "https://somafm.com/bootliquor.pls",
+    "fallback_url": "https://ice.somafm.com/bootliquor",
+    "category": "backroads"
+  },
+  {
+    "id": "trail_folk",
+    "display_name": "Trail Folk",
+    "provider": "SomaFM",
+    "station_name": "Folk Forward",
+    "description": "Indie folk, alt-folk, and acoustic.",
+    "primary_url": "https://somafm.com/folkfwd.pls",
+    "fallback_url": "https://ice.somafm.com/folkfwd",
+    "category": "trail"
+  },
+  {
+    "id": "trail_mode",
+    "display_name": "Trail Mode",
+    "provider": "SomaFM",
+    "station_name": "Secret Agent",
+    "description": "Cinematic spy soundtracks, lounge, and electronic.",
+    "primary_url": "https://somafm.com/secretagent.pls",
+    "fallback_url": "https://ice.somafm.com/secretagent",
+    "category": "trail"
+  },
+  {
+    "id": "camp_chill",
+    "display_name": "Camp Chill",
+    "provider": "SomaFM",
+    "station_name": "Groove Salad",
+    "description": "Ambient, downtempo, and chilled beats.",
+    "primary_url": "https://somafm.com/groovesalad.pls",
+    "fallback_url": "https://ice.somafm.com/groovesalad",
+    "category": "camp"
+  },
+  {
+    "id": "night_camp",
+    "display_name": "Night Camp",
+    "provider": "SomaFM",
+    "station_name": "Drone Zone",
+    "description": "Slow atmospheric ambient with minimal beats.",
+    "primary_url": "https://somafm.com/dronezone.pls",
+    "fallback_url": "https://ice.somafm.com/dronezone",
+    "category": "camp"
+  },
+  {
+    "id": "stargazing",
+    "display_name": "Stargazing",
+    "provider": "SomaFM",
+    "station_name": "Deep Space One",
+    "description": "Deep ambient, experimental, and space music.",
+    "primary_url": "https://somafm.com/deepspaceone.pls",
+    "fallback_url": "https://ice.somafm.com/deepspaceone",
+    "category": "camp"
+  },
+  {
+    "id": "orbital_camp",
+    "display_name": "Orbital Camp",
+    "provider": "SomaFM",
+    "station_name": "Space Station Soma",
+    "description": "Ambient, mid-tempo electronic, and spacey programming.",
+    "primary_url": "https://somafm.com/spacestation.pls",
+    "fallback_url": "https://ice.somafm.com/spacestation",
+    "category": "camp"
+  },
+  {
+    "id": "garage_soul",
+    "display_name": "Garage Soul",
+    "provider": "SomaFM",
+    "station_name": "Seven Inch Soul",
+    "description": "Vintage soul, funk, and original 45-era recordings.",
+    "primary_url": "https://somafm.com/7soul.pls",
+    "fallback_url": "https://ice.somafm.com/7soul",
+    "category": "road"
+  },
+  {
+    "id": "ovrland_after_dark",
+    "display_name": "OVRLand After Dark",
+    "provider": "SomaFM",
+    "station_name": "Lush",
+    "description": "Mellow vocal electronic music for evening listening.",
+    "primary_url": "https://somafm.com/lush.pls",
+    "fallback_url": "https://ice.somafm.com/lush",
+    "category": "camp"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "source": "mock",
+  "vehicle": {"speed_mph": 34, "rpm": 2180, "coolant_c": 89, "voltage_v": 13.8, "load_pct": 42, "dtc_count": 0},
+  "location": {"latitude": 38.5733, "longitude": -109.5498, "altitude_m": 1482, "altitude_source": "mock", "heading_deg": 284},
+  "attitude": {"pitch_deg": 8, "roll_deg": -4},
+  "suspension": {"left_psi": 7.0, "right_psi": 7.0, "state": "idle"},
+  "airlift": {"status": "mock", "device_name": "WirelessAir-095789", "age_ms": null, "status_uuid": null},
+  "environment": {"temperature_c": 23, "humidity_pct": 37, "pressure_kpa": 89.5, "light": "DAYLIGHT"},
+  "route": {"name": "RIDGELINE / SECTOR 04", "progress_pct": 62, "remaining_km": 12.4},
+  "sources": {"gps": "mock", "nano": "mock", "obd": "mock", "network": "not_checked", "airlift": "mock"}
+}

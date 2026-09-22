@@ -1,0 +1,23 @@
+{
+  "name": "OVRLand",
+  "expanded_name": "Operational Vehicle Readout",
+  "tagline": "Your vehicle. Your bearings. Your basecamp.",
+  "domains": [
+    "Location",
+    "Awareness",
+    "Navigation",
+    "Discovery"
+  ],
+  "modes": [
+    "Drive",
+    "Adventure",
+    "Camp"
+  ],
+  "colors": {
+    "summit_white": "#E8E2D6",
+    "expedition_amber": "#F2993A",
+    "desert_sand": "#C8B38A",
+    "steel_gray": "#6B7077",
+    "terrain_black": "#0B0B0C"
+  }
+}
