@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "condition": "day",
+      "timestamp": "2026-09-23T22:32:54.870206+00:00",
+      "rgb": [
+        45,
+        48,
+        57
+      ],
+      "brightness_raw": 48.0
+    }
+  ]
+}

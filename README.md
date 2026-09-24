@@ -64,14 +64,13 @@ ordinary internet use on the Pi.
 This installs a per-user systemd service and desktop autostart entry; it does not
 need `sudo`. Reboot or log out and back in to verify the boot flow. `Alt+F4` closes
 the kiosk window for parked maintenance; it is deliberately not auto-restarted by
-the desktop launcher. The bottom-right **CAMP MODE** control relaunches OVRLand in
-a smaller, decorated desktop window; the same control then reads **FULL SCREEN**
+the desktop launcher. The **CAMP MODE** control in the System screen relaunches
+OVRLand in a smaller, decorated desktop window; the same control then reads **FULL SCREEN**
 and returns to kiosk mode. Choosing **STOP APP** from the System screen also closes
 the OVRLand window and returns to the desktop. The initial kiosk launch plays
 `media/audio/voice/OVRLand-Start.wav` once. Moving between Camp Mode and full
-screen does not replay the startup voice. Opening Camp Mode plays
-`media/audio/voice/OVRLand-Fullscreen-Exit.wav` while a **WARNING — CO-PILOT USE
-ONLY** overlay is visible; the overlay clears when the voice ends.
+screen does not replay the startup voice. Window mode changes do not show a
+warning overlay or play an exit voice.
 
 To remove the startup setup, run:
 
@@ -103,28 +102,28 @@ entry; it does not alter the Pi desktop configuration.
   counts and relative brightness in `config/ambient_light_calibration.json`; the
   saved references are for setting vehicle-specific night thresholds later and do
   not yet alter the display theme or brightness.
-- Joystick left/right moves the white focus outline across Drive, Adventure, and
-  System while the tab layer is active. Press activates the highlighted tab. Down
-  enters the tab's upper module row, then its lower row, then Camp Mode; Up follows
-  that same path in reverse. Left/right stays within the current module row, and
-  press opens the focused module detail. Every expanded module has a visible `BACK
-  TO DASHBOARD` action; press it to return. Expanded Map uses its own left/right
-  control row for its source options and Back. Return to center between moves.
-  X/Y and button state are visible below the panes.
+- Joystick left/right moves the white focus outline across the mode tabs. Press
+  activates the highlighted tab. Down enters the dashboard; all four directions
+  then move focus to the nearest module in that direction. Up at the top edge
+  returns to the tabs; Down at the bottom edge focuses the System tab. Press opens the
+  focused module detail. Modules and buttons also respond directly to touch.
+  Every expanded module has a visible `BACK TO DASHBOARD` action; expanded Map
+  uses its own touch controls and joystick control row. Return to center between
+  joystick moves. X/Y and button state are visible below the panes.
   Mode selections are local to each visible browser; only the front display should
   use this bench control path. A separate rear-display role remains future work.
-- The System tab has separate hold-for-two-seconds controls to stop OVRLand or
-  power off the Pi. Mock mode simulates both actions without changing the host.
-- OVRLand starts and owns a private headless CLIAMP instance with the app, using a
-  persistent OVRLand-only profile at `~/.local/state/ovrland` by default (override
-  with `OVRLAND_CLIAMP_CONFIG_HOME`). It terminates that process during application
-  shutdown. The Music screen
-  reads its now-playing state and exposes a small static set of OVRLand radio
-  presets, transport, volume, shuffle, repeat, and stop through joystick detail
-  rows. CLIAMP resolves M3U/PLS presets; each station has at most one automatic
-  fallback attempt. Presets live in `config/radio_presets.json` so SomaFM entries
-  can be removed or replaced without coupling the Music architecture to SomaFM.
-  Spotify remains a separate optional portal; local music/video remains deferred.
+- The System tab contains the Camp Mode / Full Screen window toggle and separate
+  hold-for-two-seconds controls to stop OVRLand or power off the Pi. Mock mode
+  simulates the shutdown actions without changing the host.
+- The Music screen plays the curated internet radio stations directly in the
+  browser, with no local player daemon or installation needed. OVRadio stays idle
+  until a station is selected; the joystick detail offers station selection,
+  previous/next station, play/pause, volume, and stop. Presets live in
+  `config/radio_presets.json`; browser playback uses a direct audio URL so it
+  does not need to resolve M3U/PLS playlist files. Open Road uses MP3 for wider
+  browser compatibility. Current song metadata refreshes every 15 seconds from
+  provider feeds when available. Spotify remains a separate optional portal;
+  local music/video remains deferred.
 - Invalid JSON is dropped. After two seconds without valid Nano data, values clear.
   Unplug/replug is retried. Joystick requires neutral/release after reconnect; old
   control events are not replayed on browser connection. No serial commands sent.
@@ -135,13 +134,23 @@ entry; it does not alter the Pi desktop configuration.
   and reports `CONNECTED` or `UNAVAILABLE` in the source strip. Override the
   check target with `OVRLAND_NETWORK_CHECK_HOST` and
   `OVRLAND_NETWORK_CHECK_PORT` when the vehicle network requires another route.
-- Air Lift WirelessAir has an opt-in, read-only BLE adapter and rear suspension
-  card with left/right PSI. Set `OVRLAND_AIRLIFT_ENABLED=1` to connect; the unknown
-  status UUID stays unmapped until verified. See [Air Lift discovery and truck
-  testing](docs/airlift.md) for raw logs and exact ATT handle mapping. No pressure
-  adjustment commands are implemented.
-- Recording remains disabled. Map controls support online OSM and installed offline
-  packages; no trip or telemetry history is stored.
+- Weather comes from Open-Meteo, refreshed every 15 minutes. It follows a live
+  GPS fix when available; otherwise it uses the Calgary coordinates in the
+  dashboard sketch (51.04, -114.07). Set `OVRLAND_WEATHER_LATITUDE` and
+  `OVRLAND_WEATHER_LONGITUDE` to choose another fallback. Road conditions come
+  from the nearest 511 Alberta winter-road report within 35 km and refresh every
+  five minutes. 511 requires a developer key; store it in
+  `~/.config/ovrland/ovrland.env` as `OVRLAND_511_API_KEY=...`, then restart the
+  user service. Without a key, the screen says `KEY REQUIRED`. Weather feed
+  values are kept separate from Nano local-air sensor readings.
+- **RECORD** writes the complete telemetry snapshot to a local JSON Lines log at
+  5 Hz, independently of the browser connection. Press it again to stop; app
+  shutdown closes an active log. Logs are stored in
+  `~/.local/state/ovrland/recordings` by default; set `OVRLAND_RECORDING_DIR` to
+  choose another directory. **EXPORT LOG** downloads the full log, and **GPS
+  TRACK** downloads a GPX containing valid live GPS fixes only. No automatic log
+  deletion or upload is configured. Map controls support online OSM and installed
+  offline packages.
 
 Override `OVRLAND_NANO_DEVICE` to choose another serial device. Default:
 `/dev/serial/by-id/usb-Arduino_Nano_33_BLE_6645321B7A5D0D0F-if00`.
@@ -188,20 +197,32 @@ Only the latest sample and a bounded 20-event joystick history are kept in memor
 In mock mode, `static/mock.json` supplies stable, explicitly simulated readings.
 
 ## Verification
+
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
+node --check static/app.js
+node --check static/maps.js
+node --check static/navball.js
 ```
-Tests cover normalization, failed sensors, serial fragmentation/malformed input,
-disconnects, stale data, joystick edge handling, BLE packet decoding, offline maps,
-system controls, frontend element wiring, and avoiding mock GPS/OBD in live mode.
-Real HTTP and WebSocket checks verified live Nano updates. Full headless browser
-navigation has stalled on this Pi; isolated browser rendering verifies the UI using
-an actual API snapshot. Physical touch and joystick feel still need user testing.
 
-Next: verify the physical controls, connect GPS through its own adapter, then refine the vehicle integrations separately. Dedicated mode layouts and persistent
-display-level calibration are implemented; gyro and magnetometer calibration remain future work.
-See [scope and references](docs/scope.md), [checkpoint status](docs/status.md),
-and [hardware setup](docs/hardware.md).
+For JavaScript syntax checks on Raspberry Pi OS / Debian, install Node.js with
+`sudo apt update && sudo apt install nodejs`. Node.js is a development check tool;
+the dashboard runs in Chromium and the service runs in Python.
+
+The Python suite covers sensor normalization, serial and BLE input, offline maps,
+system controls, frontend wiring, feed workers, and concurrent recording/GPX export.
+Syntax checks do not verify browser behavior. The latest browser attempt passed
+mock HTTP/WebSocket checks but stalled before UI acceptance checks completed.
+
+Most review items have received code corrections. Manual checks remain for
+interrupted holds, feed-loss displays, calibration guards, forecast node reuse,
+blocked-popup fallback, physical controls, and Pi recording/export performance.
+Recording sync, low-space, and retention policies remain follow-up work.
+See the [repair handoff and manual checklist](docs/app-review-2026-09-23.md).
+
+GPS and recording are implemented; OBD, gyro and magnetometer calibration remain
+future work. See [scope and references](docs/scope.md),
+[checkpoint status](docs/status.md), and [hardware setup](docs/hardware.md).
 
 ## Dashboards and maps
 Drive and Adventure are separate dashboards styled from the supplied OVRLand

@@ -59,6 +59,8 @@ class PacketDecoder:
 
 def expand_record(record):
     """Expand the compact, integer BLE record into the USB JSON contract."""
+    if not isinstance(record, dict):
+        raise ValueError('Invalid BLE record')
     if record.get('type') == 'joystick':
         return record
     required = ('m', 'x', 'y', 'b', 'f', 'a', 'e', 'l')

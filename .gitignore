@@ -8,6 +8,3 @@ __pycache__/
 .pytest_cache/
 # Local offline map packages (large, installation-specific)
 maps/*.mbtiles
-# Historical camera reverse-engineering artifacts; not runtime app assets.
-docs/Safari+4+Connect_1.9.43_APKPure.apk
-docs/safari_apk_src/

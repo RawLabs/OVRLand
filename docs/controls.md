@@ -37,16 +37,27 @@ rely on the position of an invisible cursor.
 ```text
 Mode tabs        X = change tab       click = select tab
     Y down
-Top module row   X = change module    click = open module
-    Y down
-Lower module row X = change module    click = open module
-    Y down
-Footer           X = choose control   click = activate control
-    Y up
-Lower module row Y up = top module row
-    Y up
-Top module row   Y up = mode tabs
+Dashboard        X/Y = nearest module in that direction
+                 click = open module
+Top edge         Y up = mode tabs
+Bottom edge      Y down = recording controls
+Footer           X = choose control    click = activate control
+                 Y up = return to focused module
 ```
+
+Joystick movement follows the visible positions of modules, so all four
+directions move to the closest reachable module in that direction. Left/right
+wraps to the opposite edge when no module lies in that direction. Focus stays
+visible. Every module and button must also work by touch; touching a module opens
+its detail, while touching a control activates that control directly. Touch must
+not be required to complete any joystick path.
+
+The first joystick Down enters the dashboard at its first module. Up from the
+upper edge returns to the mode tabs; Down from the lower edge focuses Record in
+the footer. X selects Record, Export Log, or GPS Track, and Up returns to the
+last focused module. In System, the first module toggles between Camp Mode and
+Full Screen; shutdown controls still require their two-second hold. Detail
+controls retain a visible Back action and are directly touchable.
 
 The selected Map module uses its own expanded-map state rather than mouse
 emulation. Its control row is:
@@ -67,21 +78,14 @@ changing raw telemetry.
 Every other expanded module opens with `BACK TO DASHBOARD` visibly focused. Click
 returns to its source module; Y up also moves focus to that explicit Back action.
 
-Air Suspension is a read-only module in Drive and Adventure. X selects it in the
-module row and click opens live left/right pressures and status. The detail opens
-with `BACK TO DASHBOARD` focused; X/Y keep the single Back action reachable and
-click returns to the originating card. Touch can open the same detail. Pressure
-adjustment is unavailable in this implementation; no increase/decrease actions
-or BLE pressure commands are exposed.
-
-The Music tab exposes the CLIAMP-backed `CURATED RADIO` module and retains the
-separate optional `SPOTIFY` module. Spotify currently opens its existing status
-detail and Back path; it is not routed through the radio implementation. Opening
-Curated Radio focuses Play / Pause and exposes this control row:
+The Music tab stays idle until you choose a curated station; selecting a station
+starts playback directly in the browser. It retains the separate
+optional `SPOTIFY` module. Opening Curated Radio focuses Play / Pause and exposes this
+control row:
 
 ```text
-PREVIOUS | PLAY / PAUSE | NEXT | CURATED RADIO | VOLUME - | VOLUME +
-SHUFFLE | REPEAT | STOP | BACK TO DASHBOARD
+PREVIOUS STATION | PLAY / PAUSE | NEXT STATION | CURATED RADIO
+VOLUME - | VOLUME + | STOP | BACK TO DASHBOARD
 ```
 
 Selecting `CURATED RADIO` loads OVRLand's small static preset list:
@@ -94,7 +98,8 @@ BACK TO PLAYER
 ```
 
 X moves across either row and click activates the focused action or tunes the
-focused station. Y up moves focus to the explicit Back action. A station load
-tries its configured primary URL, then one fallback URL, and returns control with
-`STREAM UNAVAILABLE` if both fail. CLIAMP resolves the SomaFM PLS URLs and exposes
-available ICY now-playing metadata. Local media remains out of scope.
+focused station. Y up moves focus to the explicit Back action. A station plays
+from its configured direct audio URL in the browser. The screen reports whether
+the stream failed due to network access or unsupported audio format, and updates
+the current song title from provider metadata when it is available. Local media
+remains out of scope.

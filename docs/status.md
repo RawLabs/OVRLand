@@ -1,4 +1,4 @@
-# Development checkpoint — 2026-09-15
+# Development checkpoint — 2026-09-23
 
 OVRLand — Operational Vehicle Readout.
 Location • Awareness • Navigation • Discovery.
@@ -17,8 +17,24 @@ Location • Awareness • Navigation • Discovery.
   Pi-poweroff actions.
 - Persistent display-level attitude calibration, Nano BLE transport, offline
   raster MBTiles, and optional per-user kiosk startup.
+- Independent gpsd telemetry and JSONL recording with GPS-only GPX export.
+- Open-Meteo weather and optional Alberta 511 road-condition feeds.
 
-## Verified
+- Browser radio with a curated station catalog and cached provider track metadata.
+  The legacy player daemon and control API have been removed.
+- Recorder I/O runs off the event loop; GPX export reads a fixed log prefix and
+  writes points incrementally to a temporary file.
+
+## Repair verification
+
+Most reviewed issues have received code corrections. The
+[repair handoff](app-review-2026-09-23.md) records current automated evidence,
+original findings, and the manual acceptance checklist. The current full suite
+passes 66 tests after legacy player cleanup; Python compilation and JavaScript
+syntax checks pass. Browser UI acceptance, physical controls, Pi
+performance, and recording power-loss durability remain unverified.
+
+## Earlier bench evidence
 - Real Nano stream: initial sample measured 4.9 Hz, with 38 valid JSON messages and
   no parse errors. API delivery frequency is separate from hardware sample rate.
 - The Python suite passes coverage for sensor normalization, joystick state,
@@ -33,14 +49,13 @@ bypasses browser networking; it is not a full end-to-end browser test. Physical
 joystick feel, touch controls, and on-screen live updates still need user review.
 
 ## Limits and next steps
-1. Bench-test joystick mode selection and displayed Nano readings on the real screen.
+1. Complete the handoff browser checklist and bench-test controls and readings on the real screen.
 2. Add gyro bias/fusion and magnetometer calibration; current pitch/roll remain
    gravity estimates, display-level zeroing is available, and heading remains unavailable.
-3. Refine mode layouts in small steps, then add GPS and OBD through adapters.
-4. Build recording independently of browser lifetime; decide pause and retention
-   behavior before implementing trip/segment storage.
+3. Refine mode layouts in small steps, then add OBD through an adapter.
+4. Implement agreed recording sync/low-space policies, decide retention, and test durability.
 
-OBD, GPS and recording are not connected. Online and offline map display is
+OBD remains unavailable. GPS and recording are implemented. Online and offline map display is
 implemented; no offline package is bundled. Live mode leaves missing values
 unavailable. Barometric altitude is a firmware estimate, not a GPS fix. Light values
 are raw sensor counts, not lux. Rear-screen entertainment, OS branding, navigation

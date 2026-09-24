@@ -3,7 +3,6 @@ import asyncio
 import copy
 import json
 import ipaddress
-import logging
 import os
 import signal
 import shutil
@@ -13,17 +12,21 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import Body, FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from adapters.nano import Nano
 from adapters.nano_ble import NanoBLE
 from adapters.maps import OfflineMap
 from adapters.gpsd import GPSD
-from adapters.cliamp import Cliamp
-from adapters.airlift import AirLiftClient
+from adapters.weather import Weather
+from adapters.alberta_511 import Alberta511
+from adapters.radio_catalog import RadioCatalog
+from adapters.radio_metadata import RadioMetadata
 from adapters.ambient_light import AmbientLightCalibration, CONDITIONS, brightness
 from adapters.network import Network
+from adapters.recording import Recording
 
 ROOT = Path(__file__).resolve().parent
 FIXTURE = json.loads((ROOT / 'static/mock.json').read_text())
@@ -31,24 +34,20 @@ ambient_light_calibration = AmbientLightCalibration(ROOT / 'config' / 'ambient_l
 offline_map = OfflineMap(os.environ.get('OVRLAND_MAP_FILE', str(ROOT / 'maps/offline.mbtiles')))
 gps = GPSD(os.environ.get('OVRLAND_GPSD_HOST', '127.0.0.1'),
            int(os.environ.get('OVRLAND_GPSD_PORT', '2947')))
+WEATHER_LATITUDE = float(os.environ.get('OVRLAND_WEATHER_LATITUDE', '51.04'))
+WEATHER_LONGITUDE = float(os.environ.get('OVRLAND_WEATHER_LONGITUDE', '-114.07'))
+weather = Weather(WEATHER_LATITUDE, WEATHER_LONGITUDE)
+road_conditions = Alberta511(os.environ.get('OVRLAND_511_API_KEY', '').strip(),
+                             WEATHER_LATITUDE, WEATHER_LONGITUDE)
 network = Network(
     host=os.environ.get('OVRLAND_NETWORK_CHECK_HOST', '1.1.1.1'),
     port=int(os.environ.get('OVRLAND_NETWORK_CHECK_PORT', '443')),
 )
-cliamp = Cliamp(os.environ.get('OVRLAND_CLIAMP') or None)
-airlift = AirLiftClient(
-    address=os.environ.get('OVRLAND_AIRLIFT_ADDRESS') or None,
-    status_uuid=os.environ.get('OVRLAND_AIRLIFT_STATUS_UUID') or None,
-    enabled=os.environ.get('OVRLAND_AIRLIFT_ENABLED', '0') == '1',
-    discovery=os.environ.get('OVRLAND_AIRLIFT_DISCOVERY', '0') == '1',
-)
-if airlift.enabled:
-    airlift_log = logging.getLogger('ovrland.airlift')
-    if not airlift_log.handlers:
-        airlift_log.addHandler(logging.StreamHandler())
-    airlift_log.setLevel(logging.DEBUG if airlift.discovery or
-                        os.environ.get('OVRLAND_AIRLIFT_DEBUG') == '1' else logging.INFO)
-    airlift_log.propagate = False
+radio_presets = json.loads((ROOT / 'config' / 'radio_presets.json').read_text())
+radio_catalog = RadioCatalog(radio_presets)
+radio_metadata = RadioMetadata(radio_presets)
+recordings = Recording(os.environ.get(
+    'OVRLAND_RECORDING_DIR', str(Path.home() / '.local/state/ovrland/recordings')))
 MODE = os.environ.get('OVRLAND_MODE', 'live')
 if MODE not in ('mock', 'live'):
     raise ValueError('OVRLAND_MODE must be mock or live')
@@ -113,21 +112,30 @@ def ambient_light_reading():
 
 @asynccontextmanager
 async def lifespan(app):
-    cliamp.start()
+    recording_task = None
     try:
         if MODE == 'live':
             nano.start()
             gps.start()
             network.start()
-            airlift.start()
+            weather.start()
+            road_conditions.start()
+        recording_task = asyncio.create_task(recording_sampler())
         yield
     finally:
+        if recording_task is not None:
+            recording_task.cancel()
+            try:
+                await recording_task
+            except asyncio.CancelledError:
+                pass
+        await asyncio.to_thread(recordings.stop, 'app_shutdown')
         if MODE == 'live':
-            airlift.stop()
             network.stop()
             gps.stop()
             nano.stop()
-        cliamp.stop()
+            road_conditions.stop()
+            weather.stop()
 
 
 app = FastAPI(title='OVRLand', docs_url=None, redoc_url=None, lifespan=lifespan)
@@ -145,12 +153,8 @@ def snapshot():
     reading = nano.snapshot()
     gps_reading = gps.snapshot()
     network_reading = network.snapshot()
-    suspension_reading = airlift.snapshot()
     data['sources'] = {'gps': gps_reading['status'], 'nano': reading['status'], 'obd': 'unavailable',
-                       'network': network_reading['status'],
-                       'airlift': suspension_reading['status']}
-    data['suspension'] = suspension_reading['data']
-    data['airlift'] = {key: value for key, value in suspension_reading.items() if key != 'data'}
+                       'network': network_reading['status']}
     data['gps'] = {key: value for key, value in gps_reading.items() if key != 'data'}
     data['nano'] = {key: value for key, value in reading.items() if key != 'data'}
     data['joystick'] = None
@@ -175,7 +179,28 @@ def snapshot():
             data['location']['altitude_source'] = 'gps'
         data['gps'].update({key: value for key, value in fix.items()
                             if key not in data['location']})
+        weather.set_location(fix['latitude'], fix['longitude'], 'gps')
+        road_conditions.set_location(fix['latitude'], fix['longitude'], 'gps')
+    else:
+        weather.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
+        road_conditions.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
+    data['weather'] = weather.snapshot()
+    data['road_conditions'] = road_conditions.snapshot()
+    data['sources'].update({'weather': data['weather']['status'],
+                            'road_conditions': data['road_conditions']['status']})
     return data
+
+
+async def recording_sampler():
+    """Sample independently of browser connections while recording is active."""
+    while True:
+        if await asyncio.to_thread(recordings.is_recording):
+            try:
+                telemetry = snapshot()
+                await asyncio.to_thread(recordings.append, telemetry)
+            except Exception as error:
+                await asyncio.to_thread(recordings.fail, error)
+        await asyncio.sleep(.2)
 
 
 @app.get('/')
@@ -204,44 +229,73 @@ def set_window_mode(requested_mode: str, request: Request):
     return {'status': 'switching', 'mode': requested_mode}
 
 
+@app.get('/api/recording/status')
+def recording_status():
+    return recordings.status()
+
+
+@app.post('/api/recording/start')
+def recording_start(request: Request):
+    if not local_dashboard_request(request):
+        return Response(status_code=403)
+    try:
+        return recordings.start()
+    except OSError as error:
+        return Response(content=json.dumps({'error': f'Unable to start recording: {error}'}),
+                        media_type='application/json', status_code=503)
+
+
+@app.post('/api/recording/stop')
+def recording_stop(request: Request):
+    if not local_dashboard_request(request):
+        return Response(status_code=403)
+    return recordings.stop('user')
+
+
+@app.get('/api/recordings/{recording_id}/log')
+def recording_log(recording_id: str):
+    path = recordings.log_path(recording_id)
+    if path is None:
+        return Response(status_code=404)
+    return FileResponse(path, media_type='application/x-ndjson',
+                        filename=f'ovrland-{recording_id}.jsonl')
+
+
+@app.get('/api/recordings/{recording_id}/gps-track.gpx')
+def recording_gps_track(recording_id: str):
+    try:
+        content = recordings.gps_track(recording_id)
+    except OSError:
+        return Response(content='Unable to export recording', status_code=503)
+    if content is None:
+        return Response(status_code=404)
+
+    def chunks():
+        try:
+            while chunk := content.read(64 * 1024):
+                yield chunk
+        finally:
+            content.close()
+
+    return StreamingResponse(chunks(), background=BackgroundTask(content.close),
+                             media_type='application/gpx+xml', headers={
+        'Content-Disposition': f'attachment; filename="ovrland-{recording_id}-gps-track.gpx"',
+    })
+
+
 @app.get('/api/maps/offline')
 def offline_map_info():
     return offline_map.info()
 
 
-@app.get('/api/music/status')
-def music_status():
-    return cliamp.status()
-
-
-@app.get('/api/music/spectrum')
-def music_spectrum():
-    return cliamp.spectrum()
-
-
 @app.get('/api/music/streams')
 def music_streams():
-    result = cliamp.streams()
-    return result if result.get('ok') else Response(
-        content=json.dumps(result), media_type='application/json', status_code=503)
+    return radio_catalog.streams()
 
 
-@app.post('/api/music/stream')
-def music_select_stream(payload: dict = Body(...)):
-    stream_id = payload.get('id')
-    if not isinstance(stream_id, str) or not stream_id:
-        return Response(content=json.dumps({
-            'ok': False, 'status': 'invalid_stream', 'error': 'A stream id is required',
-        }), media_type='application/json', status_code=400)
-    result = cliamp.select_stream(stream_id)
-    status_code = 400 if result.get('status') == 'invalid_stream' else 503
-    return result if result.get('ok') else Response(
-        content=json.dumps(result), media_type='application/json', status_code=status_code)
-
-
-@app.post('/api/music/{action}')
-def music_control(action: str):
-    result = cliamp.control(action)
+@app.get('/api/music/now-playing/{stream_id}')
+def music_now_playing(stream_id: str):
+    result = radio_metadata.current(stream_id)
     return result if result.get('ok') else Response(
         content=json.dumps(result), media_type='application/json', status_code=503)
 

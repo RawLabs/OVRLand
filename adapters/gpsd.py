@@ -34,6 +34,13 @@ def normalize_tpv(report):
         'altitude_m': altitude,
         'heading_deg': track % 360 if _number(track) else None,
         'accuracy_m': accuracy,
+        'horizontal_accuracy_m': report.get('eph') if _number(report.get('eph')) else None,
+        'longitude_error_m': report.get('epx') if _number(report.get('epx')) else None,
+        'latitude_error_m': report.get('epy') if _number(report.get('epy')) else None,
+        'vertical_accuracy_m': report.get('epv') if _number(report.get('epv')) else None,
+        'speed_mps': report.get('speed') if _number(report.get('speed')) else None,
+        'speed_accuracy_mps': report.get('eps') if _number(report.get('eps')) else None,
+        'climb_mps': report.get('climb') if _number(report.get('climb')) else None,
         'mode': int(report['mode']),
         'gps_time': report.get('time') if isinstance(report.get('time'), str) else None,
     }
@@ -52,6 +59,7 @@ class GPSD:
         self.received = 0.0
         self.satellites_seen = None
         self.satellites_used = None
+        self.dop = {}
 
     def start(self):
         if self.thread and self.thread.is_alive():
@@ -77,17 +85,20 @@ class GPSD:
                 'age_ms': round(age * 1000) if age is not None else None,
                 'satellites_seen': self.satellites_seen,
                 'satellites_used': self.satellites_used,
+                'dop': dict(self.dop),
                 'data': data,
             }
 
     def _accept(self, report):
         if report.get('class') == 'SKY':
             satellites = report.get('satellites')
-            if isinstance(satellites, list):
-                with self.lock:
+            with self.lock:
+                if isinstance(satellites, list):
                     self.satellites_seen = len(satellites)
                     self.satellites_used = sum(item.get('used') is True for item in satellites
                                                if isinstance(item, dict))
+                self.dop = {key: report[key] for key in ('hdop', 'vdop', 'pdop', 'gdop')
+                            if _number(report.get(key))}
             return
         if report.get('class') != 'TPV':
             return
@@ -137,4 +148,5 @@ class GPSD:
                     self.received = 0.0
                     self.satellites_seen = None
                     self.satellites_used = None
+                    self.dop = {}
             self.stop_event.wait(self.reconnect_seconds)

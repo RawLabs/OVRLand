@@ -6,7 +6,7 @@ Hostname/user: ovrland / ovrld. Development Ethernet: Pi 10.42.0.2, laptop 10.42
 SSH: `ssh ovrld@10.42.0.2`. VNC is used during development.
 Target screen: 1280×800. Chromium kiosk installation is deferred.
 
-Observed Wi-Fi arrangement: wlan0 retains the internet default route. The secondary camera Wi-Fi connection is no longer used by OVRLand and is available for other uses. Keep network credentials out of docs, source files and commits.
+Observed Wi-Fi arrangement: wlan0 retains the internet default route. Keep network credentials out of docs, source files and commits.
 
 ## Nano 33 BLE Sense Rev2
 Persistent USB device:

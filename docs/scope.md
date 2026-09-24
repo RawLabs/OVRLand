@@ -1,4 +1,4 @@
-# Working scope — 2026-09-13
+# Working scope — 2026-09-23
 
 OVRLand: Operational Vehicle Readout. LAND: Location, Awareness, Navigation,
 Discovery. Drive / Adventure / Camp are modes, not separate applications.
@@ -13,12 +13,12 @@ Current checkpoint: the instrument frame supports mock previews and a live Nano
 bench test. Bold numerics, bearing area, attitude indicator, compact environment
 strip, route placeholders, and physical-looking mode controls target 1280×800.
 Drive and Adventure now have separate layouts based on the supplied logo/theme
-references, ; System provides guarded application-stop
+references; System provides guarded application-stop
 and Pi-poweroff controls. OpenStreetMap
 is embedded with local Leaflet controls, Gaia opens in a browser tab, and raster
-MBTiles packages can be served offline by the Pi (none installed yet). No recorder,
-OS branding, or rear-display playback is implemented. No automatic rolling-log
-policy has been decided.
+MBTiles packages can be served offline by the Pi (none installed yet). GPS and
+JSONL recording with GPX export are implemented. No OS branding or rear-display
+playback is implemented. No automatic rolling-log policy has been decided.
 
 Future: daily OBD instruments and diagnostics; adventure trip/segment recording;
 Gaia/Garmin navigation interoperability after feasibility checks; local-first connectivity with optional Starlink;
@@ -53,11 +53,7 @@ mock mode remains available. Joystick left/right focuses modes and press selects
 Static accelerometer tilt is labeled uncalibrated; heading is withheld. Environmental
 readings and raw light counts are exposed. Two-second stale timeout and reconnect.
 
-The Pi uses wlan0 for its internet route. The secondary camera Wi-Fi connection has been removed from the application configuration and is available for other uses.
-
-Protocol research reference: https://github.com/keowu/sjcam (AVIOCTRL client).
-Only protocol facts were used in a temporary connectivity probe; no upstream
-firmware or full client was copied, installed, or run. Compatibility remains partial.
+The Pi uses wlan0 for its internet route.
 
 Verification: the current Python suite covers Nano USB/BLE decoding and state,
 offline maps, system endpoints, and frontend wiring; real HTTP/static resources and WebSocket
@@ -65,3 +61,10 @@ live Nano feed passed. Isolated Chromium render with an actual telemetry snapsho
 passed 1280x800 fit, 390px phone width, mode buttons, and injected joystick selection.
 Full browser navigation remained blocked by a headless Chromium stall, so isolated
 render checks do not establish end-to-end browser networking. Physical test pending.
+
+## Repair acceptance
+
+Most review items have received code corrections; manual browser and hardware
+acceptance remains open. Use the [repair handoff](app-review-2026-09-23.md) for
+current evidence and the checklist. Recording sync, low-space handling, and
+retention decisions remain follow-up work.

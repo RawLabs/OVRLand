@@ -64,10 +64,8 @@
     ].join(',');
     earthWindow = window.open(earthURL, 'ovrland-earth-discovery', features);
     if (!earthWindow) {
-      source = 'osm';
-      document.querySelectorAll('[data-map]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.map === 'osm')));
+      choose('osm');
       window.dashboardEvent?.('Google Earth was blocked. Allow popups for OVRLand, then try again.', 5000);
-      updateStatus();
       return;
     }
     earthWindowWatch = window.setInterval(() => {
