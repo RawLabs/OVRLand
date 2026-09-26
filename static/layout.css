@@ -444,8 +444,9 @@ body.detail-open { overflow: hidden; }
   .dashboard { grid-row: 1 / 4; }
   .conditions-strip, .vehicle-strip { z-index: 2; min-width: 0; }
   .conditions-strip { display: grid; align-items: center; gap: 8px; padding: 6px 14px; }
-  .drive-conditions { grid-column: 12 / 21; grid-row: 1; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .adventure-conditions { grid-column: 1 / 21; grid-row: 1; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .drive-conditions { grid-column: 12 / 21; grid-row: 1; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .adventure-conditions { grid-column: 1 / 21; grid-row: 1; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .weather-condition { grid-column: span 2; }
   .condition-item { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-left: 10px; border-left: 1px solid var(--line); }
   .condition-item > span, .vehicle-strip-metric > span { color: var(--muted); font: bold 7px monospace; letter-spacing: 1px; }
   .condition-item strong { overflow: hidden; color: var(--text); font: bold 14px monospace; text-overflow: ellipsis; white-space: nowrap; }
@@ -508,7 +509,8 @@ body.detail-open { overflow: hidden; }
   .workspace { height: clamp(560px, 74vh, 700px); min-height: 560px; }
   .workspace, .dashboard { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 58px minmax(240px, 1fr) minmax(180px, .7fr) 88px; gap: 0; }
   .dashboard { grid-row: 1 / 5; }
-  .conditions-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 6px; }
+  .conditions-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; padding: 6px; }
+  .weather-condition { grid-column: span 2; }
   .adventure-conditions { grid-column: 1 / 13; grid-row: 1; }
   .drive-conditions { grid-column: 7 / 13; grid-row: 1; }
   .adventure-conditions .sundown, .drive-conditions .sundown { grid-column: 1 / -1; }
@@ -532,7 +534,7 @@ body.detail-open { overflow: hidden; }
   .workspace { height: auto; min-height: 0; }
   .workspace, .dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: 92px minmax(280px, 42vh) 205px 190px 88px; gap: 6px; }
   .dashboard { grid-row: 1 / 6; }
-  .conditions-strip { grid-column: 1; grid-row: 1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .conditions-strip { grid-column: 1; grid-row: 1; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .condition-item { padding-left: 4px; }
   .condition-item strong { font-size: 10px; }
   .adventure-conditions .sundown, .drive-conditions .sundown { grid-column: 1 / -1; display: flex; }
@@ -599,5 +601,31 @@ main button, .detail-window button {
   .adventure-secondary > .label { font-size: 9px; }
   .joystick-strip,
   .event-strip { font-size: 10px; }
+/* Keep the outside weather reading primary; the Nano value is a cabin proxy. */
+.weather-condition { gap: 2px; }
+.weather-condition .weather-temperature {
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1;
+}
+.weather-condition .weather-temperature i { font-style: normal; }
+.weather-condition .weather-temperature small {
+  color: var(--accent);
+  font-size: 10px;
+}
+.weather-condition .weather-summary {
+  color: var(--text);
+  font-size: 8px;
+  line-height: 1;
+}
+.weather-condition > small:last-child { font-size: 6px; line-height: 1; }
+.nano-temperature > span { font-size: 7px; letter-spacing: .4px; }
+.nano-temperature strong { color: var(--muted); font-size: 10px; line-height: 1; }
+.nano-temperature strong small { color: var(--muted); font-size: 7px; }
+
+@media (max-width: 540px) {
+  .weather-condition .weather-temperature { font-size: 17px; }
+  .nano-temperature > span { font-size: 6px; letter-spacing: 0; }
+}
   #record small { font-size: 8px; }
 }
