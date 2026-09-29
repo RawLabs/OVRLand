@@ -3,6 +3,14 @@ Operational Vehicle Readout — Location • Awareness • Navigation • Discov
 
 “Rally-game HUD meets real overland instrument panel.”
 
+OVRLand is a Raspberry Pi vehicle dashboard for overlanding, with live sensor
+telemetry, GPS maps, weather and road conditions, internet radio, and trip
+recording. Touch and joystick controls support Drive, Adventure, and Camp use.
+
+The app is in pre-beta development. GPS and recording are implemented; OBD and
+route calculation are not. See the hardware and verification notes below before
+setting up a vehicle installation.
+
 ## Run
 Python/FastAPI + WebSocket + vanilla HTML/CSS/JS. No frontend build; map controls
 and theme assets are bundled locally. Online map tiles require internet.
@@ -12,6 +20,8 @@ click**—not mouse emulation or keyboard shortcuts. See the [control contract](
 before adding a screen or control path.
 
 ```bash
+git clone https://github.com/RawLabs/OVRLand.git
+cd OVRLand
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.lock.txt
 scripts/validate.sh

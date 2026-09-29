@@ -6,5 +6,7 @@ __pycache__/
 !.env.example
 *.log
 .pytest_cache/
+.agents/
+.codex/
 # Local offline map packages (large, installation-specific)
 maps/*.mbtiles
