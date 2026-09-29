@@ -1,10 +1,41 @@
 """Alberta 511 winter-road reports for the nearest reported road segment."""
 import json
+import logging
 import math
+import ssl
 import threading
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+
+logger = logging.getLogger(__name__)
+
+
+def _same_location(lat1, lon1, source1, lat2, lon2, source2):
+    """Use the refresh threshold when deciding whether a result is still useful."""
+    return (source1 == source2 and _valid_location(lat1, lon1)
+            and _valid_location(lat2, lon2)
+            and abs(lat1 - lat2) <= .03 and abs(lon1 - lon2) <= .03)
+
+
+def _fetch_error(error):
+    # Never expose exception messages or request URLs: they may contain the API key.
+    if isinstance(error, HTTPError):
+        return {'kind': 'http', 'http_status': error.code,
+                'message': f'511 returned HTTP {error.code}'}
+    reason = error.reason if isinstance(error, URLError) else error
+    if isinstance(reason, TimeoutError):
+        return {'kind': 'timeout', 'message': '511 request timed out'}
+    if isinstance(reason, ssl.SSLError):
+        return {'kind': 'tls', 'message': '511 secure connection failed'}
+    if isinstance(error, URLError):
+        return {'kind': 'network', 'message': 'Could not connect to 511'}
+    if isinstance(error, (ValueError, UnicodeError)):
+        return {'kind': 'response', 'message': '511 response could not be read'}
+    return {'kind': 'internal', 'message': 'Road feed processing failed'}
 
 
 def _valid_location(latitude, longitude):
@@ -61,6 +92,11 @@ class Alberta511:
         self.stop_event = threading.Event()
         self.refresh_event = threading.Event()
         self.thread = None
+        self.diagnostics = {'phase': 'not_configured' if not api_key else 'not_started',
+                            'attempts': 0, 'failures': 0, 'discarded_results': 0,
+                            'last_attempt_at': None, 'last_fetch_succeeded_at': None,
+                            'last_fetch_seconds': None, 'last_error': None,
+                            'next_attempt_at': None}
         self.state = {'status': 'not_configured' if not api_key else 'waiting',
                       'provider': '511 Alberta', 'location_source': 'default'}
 
@@ -68,12 +104,15 @@ class Alberta511:
         if not _valid_location(latitude, longitude):
             return
         with self.lock:
-            moved = (source != self.location_source or self._refresh_latitude is None
-                     or self._refresh_longitude is None
-                     or abs(self._refresh_latitude - latitude) > .03
-                     or abs(self._refresh_longitude - longitude) > .03)
+            moved = not _same_location(
+                latitude, longitude, source,
+                self._refresh_latitude, self._refresh_longitude, self.location_source)
             self.latitude, self.longitude = latitude, longitude
             self.location_source = source
+            if moved and self.state.get('status') == 'live':
+                # Keep the old report and its provenance, but never present it
+                # as current while a materially different location is pending.
+                self.state = {**self.state, 'status': 'stale'}
         if moved:
             self.refresh_event.set()
 
@@ -94,7 +133,11 @@ class Alberta511:
 
     def snapshot(self):
         with self.lock:
-            return dict(self.state)
+            diagnostics = dict(self.diagnostics)
+            if diagnostics['last_error'] is not None:
+                diagnostics['last_error'] = dict(diagnostics['last_error'])
+            diagnostics['worker_alive'] = bool(self.thread and self.thread.is_alive())
+            return {**self.state, 'diagnostics': diagnostics}
 
     def _fetch(self, latitude, longitude, source):
         query = urlencode({'key': self.api_key, 'format': 'json', 'lang': 'en'})
@@ -103,7 +146,7 @@ class Alberta511:
         with urlopen(request, timeout=10) as response:
             payload = json.load(response)
         if isinstance(payload, dict):
-            records = payload.get('WinterRoads') or payload.get('winterroads') or payload.get('data') or []
+            records = _field(payload, 'WinterRoads', 'winterroads', 'data')
         else:
             records = payload
         if not isinstance(records, list):
@@ -161,17 +204,51 @@ class Alberta511:
             if self.stop_event.is_set():
                 break
             if _valid_location(latitude, longitude):
+                started = time.monotonic()
+                with self.lock:
+                    self.diagnostics.update(phase='fetching',
+                                            last_attempt_at=datetime.now(timezone.utc).isoformat(),
+                                            next_attempt_at=None)
+                    self.diagnostics['attempts'] += 1
                 try:
                     result = self._fetch(latitude, longitude, source)
                     with self.lock:
-                        if (latitude, longitude, source) == (self.latitude, self.longitude, self.location_source):
+                        self.diagnostics.update(
+                            last_fetch_succeeded_at=datetime.now(timezone.utc).isoformat(),
+                            last_error=None, phase='idle')
+                        if _same_location(latitude, longitude, source,
+                                          self.latitude, self.longitude, self.location_source):
                             self.state = result
-                except Exception:
+                        else:
+                            self.diagnostics['discarded_results'] += 1
+                            self.diagnostics['phase'] = 'location_changed'
+                            # A material move during the fetch needs a fresh result now.
+                            self.refresh_event.set()
+                            delay = 0
+                    if delay == 0:
+                        logger.warning('511 response discarded after location changed; fetching again')
+                except Exception as error:
+                    detail = _fetch_error(error)
                     with self.lock:
                         previous = self.state
                         self.state = {**previous, 'status': 'stale' if previous.get('updated_at') else 'unavailable',
                                       'provider': '511 Alberta'}
+                        self.diagnostics.update(phase='retry_wait', last_error=detail)
+                        self.diagnostics['failures'] += 1
+                    logger.warning('511 fetch failed: %s; retrying in 60 seconds', detail['message'])
                     delay = 60
+                finally:
+                    with self.lock:
+                        self.diagnostics['last_fetch_seconds'] = round(time.monotonic() - started, 3)
+            else:
+                with self.lock:
+                    self.state = {**self.state, 'status': 'waiting_location'}
+                    self.diagnostics['phase'] = 'waiting_location'
+            with self.lock:
+                self.diagnostics['next_attempt_at'] = (
+                    datetime.now(timezone.utc) + timedelta(seconds=delay)).isoformat()
             self.refresh_event.wait(delay)
             if self.stop_event.is_set():
                 break
+        with self.lock:
+            self.diagnostics.update(phase='stopped', next_attempt_at=None)

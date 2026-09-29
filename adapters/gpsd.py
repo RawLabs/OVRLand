@@ -1,17 +1,36 @@
 """Resilient, read-only client for a system-owned gpsd JSON socket."""
 import json
 import math
+import os
 import socket
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 WATCH = b'?WATCH={"enable":true,"json":true};\n'
 STALE_SECONDS = 10.0
+LAST_LOCATION_SAVE_SECONDS = 30.0
 
 
 def _number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _load_last_location(path):
+    if path is None:
+        return None
+    try:
+        location = json.loads(path.read_text())
+        latitude, longitude = location['latitude'], location['longitude']
+        if (_number(latitude) and -90 <= latitude <= 90
+                and _number(longitude) and -180 <= longitude <= 180):
+            return {'latitude': latitude, 'longitude': longitude,
+                    'received_at': location.get('received_at')}
+    except (OSError, ValueError, TypeError, KeyError):
+        pass
+    return None
 
 
 def normalize_tpv(report):
@@ -47,11 +66,13 @@ def normalize_tpv(report):
 
 
 class GPSD:
-    def __init__(self, host='127.0.0.1', port=2947, reconnect_seconds=3.0):
+    def __init__(self, host='127.0.0.1', port=2947, reconnect_seconds=3.0,
+                 last_location_file=None):
         self.host = host
         self.port = port
         self.reconnect_seconds = reconnect_seconds
         self.lock = threading.Lock()
+        self._save_lock = threading.Lock()
         self.stop_event = threading.Event()
         self.thread = None
         self.state = 'disconnected'
@@ -60,6 +81,42 @@ class GPSD:
         self.satellites_seen = None
         self.satellites_used = None
         self.dop = {}
+        self.last_location_file = Path(last_location_file) if last_location_file else None
+        self.last_location = _load_last_location(self.last_location_file)
+        self.last_location_saved_at = None
+
+    def _save_last_location(self, location):
+        path = self.last_location_file
+        if path is None:
+            return
+        # Serialize disk writes, and skip a delayed older save if a newer fix
+        # arrived while it waited for this lock.
+        with self._save_lock:
+            with self.lock:
+                current = self.last_location
+                if not current or current.get('received_at') != location.get('received_at'):
+                    return
+            temporary = None
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
+                                                 dir=path.parent, delete=False) as file:
+                    temporary = Path(file.name)
+                    json.dump(location, file)
+                    file.write('\n')
+                    file.flush()
+                os.replace(temporary, path)
+                with self.lock:
+                    if self.last_location and self.last_location.get('received_at') == location.get('received_at'):
+                        self.last_location_saved_at = time.monotonic()
+            except OSError:
+                pass
+            finally:
+                if temporary is not None:
+                    try:
+                        temporary.unlink(missing_ok=True)
+                    except OSError:
+                        pass
 
     def start(self):
         if self.thread and self.thread.is_alive():
@@ -72,6 +129,10 @@ class GPSD:
         self.stop_event.set()
         if self.thread:
             self.thread.join(timeout=2)
+        with self.lock:
+            location = dict(self.last_location) if self.last_location_file is not None and self.last_location else None
+        if location:
+            self._save_last_location(location)
 
     def snapshot(self):
         with self.lock:
@@ -87,6 +148,7 @@ class GPSD:
                 'satellites_used': self.satellites_used,
                 'dop': dict(self.dop),
                 'data': data,
+                'last_location': dict(self.last_location) if self.last_location else None,
             }
 
     def _accept(self, report):
@@ -103,16 +165,25 @@ class GPSD:
         if report.get('class') != 'TPV':
             return
         location = normalize_tpv(report)
+        save_location = None
         with self.lock:
             if location:
                 location['received_at'] = datetime.now(timezone.utc).isoformat()
                 self.latest = location
                 self.received = time.monotonic()
                 self.state = 'live'
+                self.last_location = {key: location[key]
+                                      for key in ('latitude', 'longitude', 'received_at')}
+                if (self.last_location_file is not None
+                        and (self.last_location_saved_at is None
+                             or self.received - self.last_location_saved_at >= LAST_LOCATION_SAVE_SECONDS)):
+                    save_location = dict(self.last_location)
             else:
                 self.latest = None
                 self.received = 0.0
                 self.state = 'no_fix'
+        if save_location:
+            self._save_last_location(save_location)
 
     def _run(self):
         while not self.stop_event.is_set():

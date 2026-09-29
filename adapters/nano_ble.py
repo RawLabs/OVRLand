@@ -2,6 +2,7 @@
 import asyncio
 import json
 import threading
+import time
 
 from adapters.nano import Nano
 
@@ -11,6 +12,9 @@ START = 0x01
 END = 0x02
 HEADER_BYTES = 4
 CONNECT_TIMEOUT_SECONDS = 25
+MAX_FRAME_BYTES = 1024
+MAX_FRAME_PACKETS = 64
+FRAME_TIMEOUT_SECONDS = 2
 
 
 class PacketDecoder:
@@ -22,8 +26,13 @@ class PacketDecoder:
         self.frame = None
         self.expected_packet = 0
         self.payload = bytearray()
+        self.started_at = None
+        self.packet_count = 0
 
-    def feed(self, packet):
+    def feed(self, packet, now=None):
+        now = time.monotonic() if now is None else now
+        if self.frame is not None and now - self.started_at > FRAME_TIMEOUT_SECONDS:
+            self.reset()
         packet = bytes(packet)
         if len(packet) < HEADER_BYTES:
             self.reset()
@@ -39,6 +48,8 @@ class PacketDecoder:
             self.frame = frame
             self.expected_packet = 0
             self.payload = bytearray()
+            self.started_at = now
+            self.packet_count = 0
         if self.frame is None or frame != self.frame or sequence != self.expected_packet:
             self.reset()
             return None
@@ -52,8 +63,12 @@ class PacketDecoder:
         if not length:
             self.reset()
             return None
+        if self.packet_count >= MAX_FRAME_PACKETS or len(self.payload) + length > MAX_FRAME_BYTES:
+            self.reset()
+            return None
         self.payload.extend(packet[HEADER_BYTES:])
         self.expected_packet = (self.expected_packet + 1) & 0xff
+        self.packet_count += 1
         return None
 
 
@@ -134,14 +149,13 @@ class NanoBLE(Nano):
         device = self.address or await self._find(scanner_type)
         if not device or self.stop_event.is_set():
             return
-        async with client_type(device, timeout=CONNECT_TIMEOUT_SECONDS) as client:
-            await client.start_notify(TELEMETRY_UUID, self._notification)
-            try:
+        try:
+            async with client_type(device, timeout=CONNECT_TIMEOUT_SECONDS) as client:
+                await client.start_notify(TELEMETRY_UUID, self._notification)
                 while client.is_connected and not self.stop_event.is_set():
                     await asyncio.sleep(.2)
-            finally:
-                if client.is_connected:
-                    await client.stop_notify(TELEMETRY_UUID)
+        finally:
+            self.decoder.reset()
 
     def _run(self):
         try:

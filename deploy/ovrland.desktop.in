@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OVRLand
+Comment=Start OVRLand and open the dashboard
+Exec=/bin/sh "@OVRLAND_ROOT@/scripts/ovrland-launch.sh"
+Icon=@OVRLAND_ROOT@/media/OVRLandMediaKit/icons/OVRLand_Favicon_OVR_512.png
+Terminal=false
+StartupNotify=false
+Categories=Utility;

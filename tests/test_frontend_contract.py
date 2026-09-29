@@ -53,6 +53,7 @@ class FrontendContractTests(unittest.TestCase):
         for condition in ('day', 'dusk', 'night'):
             self.assertIn(f'data-ambient-capture="{condition}"', INDEX_HTML)
         self.assertIn('/api/ambient-light/calibration', APP_JS)
+        self.assertIn("button.addEventListener('click', () => captureAmbientLightCalibration(button.dataset.ambientCapture))", APP_JS)
 
     def test_altitude_source_is_prominent_on_both_dashboards(self):
         self.assertEqual(INDEX_HTML.count('data-altitude-label'), 2)
@@ -86,8 +87,9 @@ class FrontendContractTests(unittest.TestCase):
             'drive': ['map', 'conditions', 'attitude', 'obd'],
             'adventure': ['conditions', 'attitude', 'map', 'location', 'obd'],
             'music': ['radio', 'spotify'],
-            'camp': ['window-mode', 'stop-app', 'poweroff-pi', 'record',
-                     'export-log', 'export-gps-track'],
+            'camp': ['capture-day', 'capture-dusk', 'capture-night', 'record',
+                     'export-log', 'export-gps-track', 'export-all-recordings',
+                     'window-mode', 'stop-app', 'poweroff-pi'],
         }
         for mode, order in expected.items():
             declaration = re.search(rf"  {mode}: \[(.*?)\n  \],", navigation, re.S)
@@ -98,8 +100,18 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn('if (ahead.length) return setModuleFocus(ahead[0].index);', APP_JS)
         self.assertIn("['window-mode', '#window-mode-toggle'", APP_JS)
         self.assertIn("['record', '#record', 'START RECORDING']", APP_JS)
-        self.assertIn("['export-log', '#export-log', 'EXPORT FULL LOG']", APP_JS)
-        self.assertIn("['export-gps-track', '#export-gps-track', 'EXPORT GPS TRACK']", APP_JS)
+        self.assertIn("['export-log', '#export-log', 'EXPORT LATEST LOG']", APP_JS)
+        self.assertIn("['export-gps-track', '#export-gps-track', 'EXPORT LATEST GPS TRACK']", APP_JS)
+        self.assertIn("['export-all-recordings', '#export-all-recordings', 'EXPORT ALL LOGS']", APP_JS)
+        for condition in ('day', 'dusk', 'night'):
+            self.assertIn(f"['capture-{condition}', '[data-ambient-capture=\"{condition}\"]'", APP_JS)
+        self.assertIn("action?.startsWith('capture-')", APP_JS)
+        self.assertIn("targetNode.scrollIntoView({block: 'nearest', inline: 'nearest'})", APP_JS)
+        self.assertIn("modeButtons[focusIndex].scrollIntoView({block: 'nearest', inline: 'nearest'})", APP_JS)
+        self.assertIn("recordButton.addEventListener('click', toggleRecording)", APP_JS)
+        self.assertIn("exportLogButton.addEventListener('click', () => downloadRecording('log'))", APP_JS)
+        self.assertIn("exportGpsTrackButton.addEventListener('click', () => downloadRecording('gps-track.gpx'))", APP_JS)
+        self.assertIn("exportAllRecordingsButton.addEventListener('click', downloadAllRecordings)", APP_JS)
         self.assertIn("if (direction === 'up')", APP_JS)
         self.assertIn('focusMode(focusIndex);', APP_JS)
         self.assertNotIn('sectionLayerIndex', APP_JS)
@@ -117,6 +129,8 @@ class FrontendContractTests(unittest.TestCase):
         self.assertLess(open_detail.index('clearJoystickFocus();'),
                         open_detail.index('detailRestore ='))
         self.assertIn('setModuleFocus(moduleIndex);', close_detail)
+        detail_focus = APP_JS.split('function setDetailFocus(index)', 1)[1].split('function activateDetailControl', 1)[0]
+        self.assertIn("button?.scrollIntoView({block: 'nearest', inline: 'nearest'})", detail_focus)
 
     def test_detail_cleanup_removes_all_global_detail_states(self):
         close_detail = APP_JS.split('function closeDetail()', 1)[1].split('function openCalibration()', 1)[0]

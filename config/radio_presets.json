@@ -30,7 +30,8 @@
     "description": "Indie pop, indie rock, and alternative.",
     "primary_url": "https://somafm.com/indiepop.pls",
     "fallback_url": "https://ice.somafm.com/indiepop",
-    "category": "road"
+    "category": "road",
+    "browser_url": "https://ice6.somafm.com/indiepop-128-mp3"
   },
   {
     "id": "old_highway",
@@ -41,7 +42,8 @@
     "description": "Mellow 1970s album rock.",
     "primary_url": "https://somafm.com/seventies.pls",
     "fallback_url": "https://ice.somafm.com/seventies",
-    "category": "road"
+    "category": "road",
+    "browser_url": "https://ice6.somafm.com/seventies-128-mp3"
   },
   {
     "id": "retro_run",
@@ -52,7 +54,8 @@
     "description": "Early-80s synthpop and UK new wave.",
     "primary_url": "https://somafm.com/u80s.pls",
     "fallback_url": "https://ice.somafm.com/u80s",
-    "category": "road"
+    "category": "road",
+    "browser_url": "https://ice6.somafm.com/u80s-128-mp3"
   },
   {
     "id": "backroads",
@@ -63,7 +66,8 @@
     "description": "Americana, roots, and country.",
     "primary_url": "https://somafm.com/bootliquor.pls",
     "fallback_url": "https://ice.somafm.com/bootliquor",
-    "category": "backroads"
+    "category": "backroads",
+    "browser_url": "https://ice6.somafm.com/bootliquor-128-mp3"
   },
   {
     "id": "trail_folk",
@@ -74,7 +78,8 @@
     "description": "Indie folk, alt-folk, and acoustic.",
     "primary_url": "https://somafm.com/folkfwd.pls",
     "fallback_url": "https://ice.somafm.com/folkfwd",
-    "category": "trail"
+    "category": "trail",
+    "browser_url": "https://ice6.somafm.com/folkfwd-128-mp3"
   },
   {
     "id": "trail_mode",
@@ -85,7 +90,8 @@
     "description": "Cinematic spy soundtracks, lounge, and electronic.",
     "primary_url": "https://somafm.com/secretagent.pls",
     "fallback_url": "https://ice.somafm.com/secretagent",
-    "category": "trail"
+    "category": "trail",
+    "browser_url": "https://ice6.somafm.com/secretagent-128-mp3"
   },
   {
     "id": "camp_chill",
@@ -96,7 +102,8 @@
     "description": "Ambient, downtempo, and chilled beats.",
     "primary_url": "https://somafm.com/groovesalad.pls",
     "fallback_url": "https://ice.somafm.com/groovesalad",
-    "category": "camp"
+    "category": "camp",
+    "browser_url": "https://ice6.somafm.com/groovesalad-128-mp3"
   },
   {
     "id": "night_camp",
@@ -107,7 +114,8 @@
     "description": "Slow atmospheric ambient with minimal beats.",
     "primary_url": "https://somafm.com/dronezone.pls",
     "fallback_url": "https://ice.somafm.com/dronezone",
-    "category": "camp"
+    "category": "camp",
+    "browser_url": "https://ice6.somafm.com/dronezone-128-mp3"
   },
   {
     "id": "stargazing",
@@ -118,7 +126,8 @@
     "description": "Deep ambient, experimental, and space music.",
     "primary_url": "https://somafm.com/deepspaceone.pls",
     "fallback_url": "https://ice.somafm.com/deepspaceone",
-    "category": "camp"
+    "category": "camp",
+    "browser_url": "https://ice6.somafm.com/deepspaceone-128-mp3"
   },
   {
     "id": "orbital_camp",
@@ -129,7 +138,8 @@
     "description": "Ambient, mid-tempo electronic, and spacey programming.",
     "primary_url": "https://somafm.com/spacestation.pls",
     "fallback_url": "https://ice.somafm.com/spacestation",
-    "category": "camp"
+    "category": "camp",
+    "browser_url": "https://ice6.somafm.com/spacestation-128-mp3"
   },
   {
     "id": "garage_soul",
@@ -140,7 +150,8 @@
     "description": "Vintage soul, funk, and original 45-era recordings.",
     "primary_url": "https://somafm.com/7soul.pls",
     "fallback_url": "https://ice.somafm.com/7soul",
-    "category": "road"
+    "category": "road",
+    "browser_url": "https://ice6.somafm.com/7soul-128-mp3"
   },
   {
     "id": "ovrland_after_dark",
@@ -151,6 +162,7 @@
     "description": "Mellow vocal electronic music for evening listening.",
     "primary_url": "https://somafm.com/lush.pls",
     "fallback_url": "https://ice.somafm.com/lush",
-    "category": "camp"
+    "category": "camp",
+    "browser_url": "https://ice6.somafm.com/lush-128-mp3"
   }
 ]

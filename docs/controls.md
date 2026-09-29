@@ -39,10 +39,7 @@ Mode tabs        X = change tab       click = select tab
     Y down
 Dashboard        X/Y = nearest module in that direction
                  click = open module
-Top edge         Y up = mode tabs
-Bottom edge      Y down = recording controls
-Footer           X = choose control    click = activate control
-                 Y up = return to focused module
+Top/bottom edges wrap among the visible modules
 ```
 
 Joystick movement follows the visible positions of modules, so all four
@@ -53,11 +50,15 @@ its detail, while touching a control activates that control directly. Touch must
 not be required to complete any joystick path.
 
 The first joystick Down enters the dashboard at its first module. Up from the
-upper edge returns to the mode tabs; Down from the lower edge focuses Record in
-the footer. X selects Record, Export Log, or GPS Track, and Up returns to the
-last focused module. In System, the first module toggles between Camp Mode and
-Full Screen; shutdown controls still require their two-second hold. Detail
-controls retain a visible Back action and are directly touchable.
+top edge returns to the mode tabs. The System screen exposes all controls as
+normal focusable modules, including recording and exports. Joystick focus follows the visible controls from
+ambient light capture through recording and exports to window and shutdown
+actions. The three ambient capture buttons, recording controls, exports, and
+window toggle activate on press. STOP APP and POWER OFF PI require a continuous
+two-second hold. Moving focus, changing tabs, opening or closing details, losing
+the feed, or reconnecting cancels a pending joystick hold. A release is required
+before another hold can arm. Focus scrolls into view when needed, and every
+System control is directly touchable.
 
 The selected Map module uses its own expanded-map state rather than mouse
 emulation. Its control row is:

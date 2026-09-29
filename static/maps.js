@@ -9,6 +9,7 @@
   let position = null;
   let marker = null;
   let hasCentered = false;
+  let followPosition = true;
   let sampleSource = null;
   let tileError = false;
   let map;
@@ -30,6 +31,7 @@
         $('#map-open').href = `https://www.openstreetmap.org/#map=${map.getZoom()}/${c.lat}/${c.lng}`;
       }
     });
+    map.on('dragstart', () => { followPosition = false; });
   }
   function updateStatus() {
     if (source === 'gaia') {
@@ -45,6 +47,16 @@
   }
   function resize() {
     requestAnimationFrame(() => map?.invalidateSize({pan: false}));
+  }
+  function followGpsPosition() {
+    if (!followPosition || !position || !map || source === 'gaia' || source === 'earth'
+      || (source === 'offline' && !offlineInfo?.available)) return;
+    if (!hasCentered) {
+      map.setView(position, Math.min(source === 'offline' ? offlineInfo.maxzoom : 19, 12));
+      hasCentered = true;
+    } else {
+      map.panTo(position, {animate: false});
+    }
   }
   function closeEarth() {
     if (earthWindow && !earthWindow.closed) earthWindow.close();
@@ -108,6 +120,7 @@
         map.fitBounds(bounds, {animate: false});
         offlineLayer.addTo(map);
       }
+      followGpsPosition();
     }
     updateStatus();
     resize();
@@ -154,7 +167,9 @@
       && (source !== 'offline' || offlineInfo?.available)),
     center() {
       if (!this.canCenter()) return false;
+      followPosition = true;
       map.setView(position, Math.min(source === 'offline' ? offlineInfo.maxzoom : 19, 13));
+      hasCentered = true;
       return true;
     },
     restoreDashboard() { resize(); },
@@ -171,7 +186,7 @@
       if (map) {
         if (!marker) marker = L.circleMarker(position, {radius: 6, color: '#f2993a', fillColor: '#0b0d0c', fillOpacity: 1, weight: 3}).addTo(map);
         else if (moved) marker.setLatLng(position);
-        if (!hasCentered && source === 'osm') {map.setView(position, 12); hasCentered = true;}
+        if (moved) followGpsPosition();
       }
       // Preserve tile-error status during the high-frequency telemetry stream.
       if (!tileError) updateStatus();

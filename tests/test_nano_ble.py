@@ -1,4 +1,5 @@
 import json
+import time
 import unittest
 
 from adapters.nano_ble import END, HEADER_BYTES, START, NanoBLE, PacketDecoder, expand_record
@@ -39,6 +40,22 @@ class PacketDecoderTests(unittest.TestCase):
         decoder = PacketDecoder()
         self.assertIsNone(decoder.feed(bytes([START, 1, 0, 5]) + b'abc'))
         self.assertEqual(HEADER_BYTES, 4)
+
+    def test_decoder_bounds_unterminated_frame_and_resets_after_timeout(self):
+        decoder = PacketDecoder()
+        self.assertIsNone(decoder.feed(bytes([START, 1, 0, 16]) + b'x' * 16, now=0))
+        for sequence in range(1, 64):
+            decoder.feed(bytes([0, 1, sequence, 16]) + b'x' * 16, now=.1 * sequence)
+        self.assertLessEqual(len(decoder.payload), 1024)
+        self.assertIsNone(decoder.feed(bytes([0, 1, 64, 16]) + b'x' * 16, now=1))
+        self.assertEqual(len(decoder.payload), 0)
+        decoder.feed(bytes([START, 2, 0, 1]) + b'x', now=10)
+        self.assertIsNone(decoder.feed(bytes([0, 2, 1, 1]) + b'y', now=13))
+        self.assertEqual(len(decoder.payload), 0)
+        received = None
+        for packet in packets({'type': 'joystick', 'x': 0}, frame=3):
+            received = decoder.feed(packet, now=14) or received
+        self.assertIsNotNone(received)
 
     def test_notification_updates_the_shared_nano_state(self):
         record = {'type': 'joystick', 'ms': 2, 'x': 0.0, 'y': 0.0, 'pressed': False,

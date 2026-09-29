@@ -89,7 +89,7 @@
           const tangent = project(latitude, longitude + .5, cp, sp, cr, sr);
           ctx.save(); ctx.translate(point.x, point.y);
           ctx.rotate(Math.atan2(tangent.y - point.y, tangent.x - point.x));
-          ctx.font = `bold ${10 + point.z * 4}px monospace`;
+          ctx.font = `bold ${14 + point.z * 5}px monospace`;
           ctx.lineWidth = 3; ctx.strokeStyle = '#14201bd9'; ctx.fillStyle = '#eee5ce';
           const label = latitude > 0 ? `+${latitude}` : String(latitude);
           ctx.strokeText(label, 0, 0); ctx.fillText(label, 0, 0); ctx.restore();
@@ -119,7 +119,7 @@
       ctx.strokeStyle = '#ffb34d'; ctx.lineWidth = 4; ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fillStyle = '#ffb34d'; ctx.fill();
     } else {
-      ctx.fillStyle = '#a8afa4'; ctx.font = 'bold 17px monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#a8afa4'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center';
       ctx.fillText('NO ATTITUDE', 0, 5);
     }
     if (alert !== 'normal') {
@@ -127,7 +127,7 @@
       ctx.fillStyle = alarm ? '#5c1818e8' : '#584818e8';
       ctx.fillRect(-72, 103, 144, 20);
       ctx.fillStyle = alarm ? '#ff756d' : '#ffd766';
-      ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = 'bold 16px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(alarm ? 'TILT ALARM 30°+' : 'TILT CAUTION 20°+', 0, 113);
     }
     ctx.restore();

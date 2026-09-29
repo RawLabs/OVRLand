@@ -53,10 +53,12 @@ Use mock mode or stub system actions when checking interrupted holds.
 
 ## Remaining recording work
 
-Periodic `fsync`, low-space refusal/stop, and retention remain design and
-implementation follow-ups. Disk-full/close-error recovery and power-loss
-persistence need testing after the intended policy is implemented. These are
-not resolved merely by completing manual UI checks.
+Periodic `fsync`, low-space refusal, bounded recovery, and export cleanup have
+since been implemented; see the [pre-beta health check](pre-beta-health-check.md)
+for current test evidence. Retention remains a separate product decision.
+Power-loss persistence still needs a controlled test on the target Pi and its
+intended storage; automated clean-stop tests do not establish behavior after
+power is cut.
 
 ## Original review evidence and limits
 
@@ -234,3 +236,10 @@ compilation, `git diff --check`, and Node.js syntax checks for `static/app.js`,
 `static/maps.js`, and `static/navball.js` pass. README, status, and scope now link
 to the manual acceptance checklist. Browser/hardware acceptance and recording
 policy work remain open as listed above.
+
+## Pre-beta status update — 2026-09-29
+
+The current task register and evidence supersede earlier counts and follow-up
+status in this historical handoff; see the [pre-beta health check](pre-beta-health-check.md).
+The full validation script passes 96 Python tests, 84 subtests, and 14 Node
+tests. Chromium UI acceptance and target-Pi/hardware acceptance remain open.

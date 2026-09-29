@@ -8,7 +8,7 @@ Type=simple
 WorkingDirectory=@OVRLAND_ROOT@
 Environment=OVRLAND_MODE=live
 EnvironmentFile=-%h/.config/ovrland/ovrland.env
-ExecStart=@OVRLAND_ROOT@/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8000 --no-proxy-headers
+ExecStart="@OVRLAND_ROOT@/.venv/bin/python" -m uvicorn app:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 Restart=on-failure
 RestartSec=3
 

@@ -10,6 +10,56 @@
         57
       ],
       "brightness_raw": 48.0
+    },
+    {
+      "condition": "day",
+      "timestamp": "2026-09-24T21:13:17.926272+00:00",
+      "rgb": [
+        18,
+        22,
+        26
+      ],
+      "brightness_raw": 21.4
+    },
+    {
+      "condition": "night",
+      "timestamp": "2026-09-26T02:03:45.185163+00:00",
+      "rgb": [
+        0,
+        0,
+        0
+      ],
+      "brightness_raw": 0.0
+    },
+    {
+      "condition": "day",
+      "timestamp": "2026-09-27T17:32:33.783012+00:00",
+      "rgb": [
+        51,
+        56,
+        53
+      ],
+      "brightness_raw": 54.7
+    },
+    {
+      "condition": "day",
+      "timestamp": "2026-09-27T17:32:44.307369+00:00",
+      "rgb": [
+        160,
+        167,
+        190
+      ],
+      "brightness_raw": 167.2
+    },
+    {
+      "condition": "day",
+      "timestamp": "2026-09-28T16:24:13.732843+00:00",
+      "rgb": [
+        19,
+        24,
+        29
+      ],
+      "brightness_raw": 23.3
     }
   ]
 }

@@ -98,6 +98,23 @@ class NanoTests(unittest.TestCase):
         self.assertIsNone(data['location']['heading_deg'])
         self.assertEqual(data['source'], 'live')
 
+    def test_ble_sensor_telemetry_has_no_dashboard_control_authority(self):
+        import app
+        reading = {'status': 'live', 'data': {
+            'environment': {'temperature_c': 20, 'altitude_m': 0}, 'attitude': {}, 'imu': {},
+            'joystick': {'x': 1, 'pressed': True}, 'received_at': 'now',
+        }}
+        gps = {'status': 'no_fix', 'data': None, 'last_location': None}
+        with patch.object(app, 'MODE', 'live'), patch.object(app, 'NANO_TRANSPORT', 'ble'), \
+             patch.object(app.nano, 'snapshot', return_value=reading), \
+             patch.object(app.gps, 'snapshot', return_value=gps), \
+             patch.object(app.network, 'snapshot', return_value={'status': 'unavailable'}), \
+             patch.object(app.weather, 'set_location'), patch.object(app.weather, 'snapshot', return_value={'status': 'waiting'}), \
+             patch.object(app.road_conditions, 'set_location'), patch.object(app.road_conditions, 'snapshot', return_value={'status': 'waiting'}):
+            data = app.snapshot()
+        self.assertIsNone(data['joystick'])
+        self.assertEqual(data['environment']['temperature_c'], 20)
+
 
 if __name__ == '__main__':
     unittest.main()

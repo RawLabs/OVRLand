@@ -27,12 +27,12 @@ Location • Awareness • Navigation • Discovery.
 
 ## Repair verification
 
-Most reviewed issues have received code corrections. The
-[repair handoff](app-review-2026-09-23.md) records current automated evidence,
-original findings, and the manual acceptance checklist. The current full suite
-passes 66 tests after legacy player cleanup; Python compilation and JavaScript
-syntax checks pass. Browser UI acceptance, physical controls, Pi
-performance, and recording power-loss durability remain unverified.
+The current repair register, verification limits, and owner-ready acceptance
+queue are in the [pre-beta health check](pre-beta-health-check.md). The register
+has code changes for the reviewed tasks, but this tree is not signed off for
+beta: browser acceptance on Chromium, target-Pi operation, and the clean release
+validation run remain open. The working tree is dirty, so its changes are not
+yet tied to a clean candidate revision.
 
 ## Earlier bench evidence
 - Real Nano stream: initial sample measured 4.9 Hz, with 38 valid JSON messages and
@@ -49,11 +49,11 @@ bypasses browser networking; it is not a full end-to-end browser test. Physical
 joystick feel, touch controls, and on-screen live updates still need user review.
 
 ## Limits and next steps
-1. Complete the handoff browser checklist and bench-test controls and readings on the real screen.
+1. Complete the browser and target-device acceptance tasks in the pre-beta health check.
 2. Add gyro bias/fusion and magnetometer calibration; current pitch/roll remain
    gravity estimates, display-level zeroing is available, and heading remains unavailable.
 3. Refine mode layouts in small steps, then add OBD through an adapter.
-4. Implement agreed recording sync/low-space policies, decide retention, and test durability.
+4. Decide recording retention separately; test recording power-cut durability on the target device.
 
 OBD remains unavailable. GPS and recording are implemented. Online and offline map display is
 implemented; no offline package is bundled. Live mode leaves missing values

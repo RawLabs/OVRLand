@@ -14,6 +14,7 @@ before adding a screen or control path.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.lock.txt
+scripts/validate.sh
 # Live Nano bench test (default):
 .venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 # Or mock layout preview (no hardware opened):
@@ -27,6 +28,10 @@ disabled and do not proxy these system endpoints: authorization relies on the
 direct loopback peer. Until the optional kiosk setup below is installed, this is a
 manually launched preview. Run one worker so only one adapter reads the serial
 port. Close other serial monitors first.
+
+The validation command runs Python compilation and unit tests, JavaScript
+syntax and joystick hold tests, and shell syntax checks. CI runs it on Ubuntu
+24.04 with Python 3.12 and the checked-in lockfile.
 
 ## Remote maintenance
 
@@ -62,12 +67,15 @@ intentional map windows opened by the dashboard; use a separate browser for
 ordinary internet use on the Pi.
 
 This installs a per-user systemd service and desktop autostart entry; it does not
-need `sudo`. Reboot or log out and back in to verify the boot flow. `Alt+F4` closes
+need `sudo` after installing the `wmctrl` system package (`sudo apt install wmctrl`).
+Reboot or log out and back in to verify the boot flow. `Alt+F4` closes
 the kiosk window for parked maintenance; it is deliberately not auto-restarted by
-the desktop launcher. The **CAMP MODE** control in the System screen relaunches
-OVRLand in a smaller, decorated desktop window; the same control then reads **FULL SCREEN**
-and returns to kiosk mode. Choosing **STOP APP** from the System screen also closes
-the OVRLand window and returns to the desktop. The initial kiosk launch plays
+the desktop launcher. The **CAMP MODE** control in the System screen restores
+OVRLand to a smaller, decorated desktop window; the same control then reads **FULL SCREEN**
+and fills the display again. Both modes use the same Chromium window, so radio audio,
+the dashboard connection, and recording continue through the transition. Choosing
+**STOP APP** from the System screen also closes the OVRLand window and returns to the
+desktop. The initial launch plays
 `media/audio/voice/OVRLand-Start.wav` once. Moving between Camp Mode and full
 screen does not replay the startup voice. Window mode changes do not show a
 warning overlay or play an exit voice.
@@ -77,6 +85,10 @@ To remove the startup setup, run:
 ```bash
 bash scripts/install_kiosk.sh remove
 ```
+
+After **STOP APP** closes the kiosk, relaunch OVRLand from the desktop
+application menu entry named **OVRLand**. The entry starts the user service and
+opens the dashboard.
 
 If a kiosk session ever prevents normal desktop use, press `Ctrl+Alt+F2`, sign
 in at the text console, run the removal command above from the repository, then
@@ -112,9 +124,10 @@ entry; it does not alter the Pi desktop configuration.
   joystick moves. X/Y and button state are visible below the panes.
   Mode selections are local to each visible browser; only the front display should
   use this bench control path. A separate rear-display role remains future work.
-- The System tab contains the Camp Mode / Full Screen window toggle and separate
-  hold-for-two-seconds controls to stop OVRLand or power off the Pi. Mock mode
-  simulates the shutdown actions without changing the host.
+- The System tab's ambient capture, recording, export, window-mode, and shutdown
+  controls are all joystick reachable and directly touchable. STOP APP and POWER
+  OFF PI require a continuous two-second hold. Mock mode simulates shutdown
+  actions without changing the host.
 - The Music screen plays the curated internet radio stations directly in the
   browser, with no local player daemon or installation needed. OVRadio stays idle
   until a station is selected; the joystick detail offers station selection,
@@ -135,22 +148,46 @@ entry; it does not alter the Pi desktop configuration.
   check target with `OVRLAND_NETWORK_CHECK_HOST` and
   `OVRLAND_NETWORK_CHECK_PORT` when the vehicle network requires another route.
 - Weather comes from Open-Meteo, refreshed every 15 minutes. It follows a live
-  GPS fix when available; otherwise it uses the Calgary coordinates in the
-  dashboard sketch (51.04, -114.07). Set `OVRLAND_WEATHER_LATITUDE` and
-  `OVRLAND_WEATHER_LONGITUDE` to choose another fallback. Road conditions come
+  GPS fix when available, then uses the last valid GPS position if the fix is lost
+  or the app restarts. The last position is saved at
+  `~/.local/state/ovrland/last_gps_location.json`; set `OVRLAND_LAST_GPS_FILE`
+  to use another path. Before the first valid fix, weather uses the configured
+  fallback coordinates (51.04, -114.07 by default). Set `OVRLAND_WEATHER_LATITUDE`
+  and `OVRLAND_WEATHER_LONGITUDE` to change them. Set
+  `OVRLAND_DEFAULT_LOCATION_NAME` to name that configured location in the UI.
+  Road conditions come
   from the nearest 511 Alberta winter-road report within 35 km and refresh every
   five minutes. 511 requires a developer key; store it in
   `~/.config/ovrland/ovrland.env` as `OVRLAND_511_API_KEY=...`, then restart the
   user service. Without a key, the screen says `KEY REQUIRED`. Weather feed
   values are kept separate from Nano local-air sensor readings.
+  For 511 troubleshooting, `/api/telemetry` includes
+  `road_conditions.diagnostics`: worker activity, fetch phase, attempt/failure
+  counts, discarded results, last attempt and successful fetch times, fetch
+  duration, the next scheduled attempt, and a safe error category/HTTP status.
+  `updated_at` identifies the last published result; a successful fetch can
+  still be discarded if the location source changes or movement exceeds the
+  refresh threshold during the request. Small GPS changes within that threshold
+  no longer discard usable reports. Failed requests retry after 60 seconds;
+  the display gives a short failure reason and service logs record failures
+  and discarded responses without request URLs or API keys. Inspect logs with
+  `systemctl --user status ovrland.service` or
+  `journalctl --user -u ovrland.service` where journal history is available.
 - **RECORD** writes the complete telemetry snapshot to a local JSON Lines log at
   5 Hz, independently of the browser connection. Press it again to stop; app
   shutdown closes an active log. Logs are stored in
   `~/.local/state/ovrland/recordings` by default; set `OVRLAND_RECORDING_DIR` to
-  choose another directory. **EXPORT LOG** downloads the full log, and **GPS
-  TRACK** downloads a GPX containing valid live GPS fixes only. No automatic log
-  deletion or upload is configured. Map controls support online OSM and installed
-  offline packages.
+  choose another directory. **LATEST LOG** and **LATEST GPS TRACK** export the
+  active or most recent session. **ALL LOGS · ZIP** downloads every saved log
+  together, including a consistent snapshot of an active log. No automatic log
+  deletion or upload is configured. System shows elapsed time, distance, moving
+  time, GPS fix count, and last fix for the active or most recent log. Distance
+  and moving time use distinct live GPS fixes and are estimates; gaps and
+  implausible jumps are excluded. Map controls support online OSM and installed
+  offline packages. The recorder fsyncs at least every five seconds and on a
+  clean stop. It refuses to start with less than 256 MiB free and stops when
+  that reserve is reached. Set `OVRLAND_RECORDING_MIN_FREE_BYTES` to change the
+  reserve. Logs are never silently removed; copy or export them for maintenance.
 
 Override `OVRLAND_NANO_DEVICE` to choose another serial device. Default:
 `/dev/serial/by-id/usb-Arduino_Nano_33_BLE_6645321B7A5D0D0F-if00`.
@@ -205,20 +242,17 @@ node --check static/maps.js
 node --check static/navball.js
 ```
 
-For JavaScript syntax checks on Raspberry Pi OS / Debian, install Node.js with
-`sudo apt update && sudo apt install nodejs`. Node.js is a development check tool;
-the dashboard runs in Chromium and the service runs in Python.
+For a fresh installation, use `scripts/validate.sh` after installing the
+checked-in lockfile. It runs the Python suite, Python compilation, JavaScript
+syntax and joystick hold checks, and shell syntax checks. Node.js is a
+development check tool; the dashboard runs in Chromium and the service runs in
+Python.
 
-The Python suite covers sensor normalization, serial and BLE input, offline maps,
-system controls, frontend wiring, feed workers, and concurrent recording/GPX export.
-Syntax checks do not verify browser behavior. The latest browser attempt passed
-mock HTTP/WebSocket checks but stalled before UI acceptance checks completed.
-
-Most review items have received code corrections. Manual checks remain for
-interrupted holds, feed-loss displays, calibration guards, forecast node reuse,
-blocked-popup fallback, physical controls, and Pi recording/export performance.
-Recording sync, low-space, and retention policies remain follow-up work.
-See the [repair handoff and manual checklist](docs/app-review-2026-09-23.md).
+The pre-beta review records current code repairs, automated evidence, the
+dependency advisory scan, and the remaining target-device gate in
+[docs/pre-beta-health-check.md](docs/pre-beta-health-check.md). Browser viewport,
+physical joystick and sensor behavior, cold boot, long recording soak, and
+controlled power-loss durability still require the target display and hardware.
 
 GPS and recording are implemented; OBD, gyro and magnetometer calibration remain
 future work. See [scope and references](docs/scope.md),
@@ -228,6 +262,10 @@ future work. See [scope and references](docs/scope.md),
 Drive and Adventure are separate dashboards styled from the supplied OVRLand
 logo/theme references. Drive uses round performance gauges; Adventure emphasizes
 the map, field conditions, and larger orientation instruments. System provides guarded stop-app and Pi-poweroff controls. Unknown readings remain blank.
+The conditions detail shows the nearest 511 road report's road, location,
+distance, reported time, and secondary conditions when available. The weather
+strip summarizes precipitation chance, gusts, and low visibility over the next
+three forecast hours. Feed age and stale status remain visible when updates fail.
 
 The map source buttons select **OpenStreetMap**, **Gaia**, **Earth / Discovery**,
 or **Offline**. OSM is

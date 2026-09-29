@@ -1,4 +1,42 @@
 'use strict';
+class SystemHoldGuard {
+  constructor(duration = 2000) {
+    this.duration = duration;
+    this.action = null;
+    this.origin = null;
+    this.startedAt = null;
+    this.releaseRequired = false;
+  }
+  arm(action, origin, now) {
+    if (!action || this.releaseRequired || this.action) return false;
+    this.action = action;
+    this.origin = origin;
+    this.startedAt = now;
+    return true;
+  }
+  update({origin, events = [], pressed, now}) {
+    if (!pressed) {
+      this.cancel(false);
+      this.releaseRequired = false;
+      return null;
+    }
+    if (!this.action) return null;
+    if (origin !== this.origin || events.some(event => event.action !== 'select')) {
+      this.cancel(true);
+      return null;
+    }
+    if (now - this.startedAt < this.duration) return null;
+    const action = this.action;
+    this.cancel(true);
+    return action;
+  }
+  cancel(requireRelease = true) {
+    if (this.action && requireRelease) this.releaseRequired = true;
+    this.action = null;
+    this.origin = null;
+    this.startedAt = null;
+  }
+}
 const $ = (selector) => document.querySelector(selector);
 const driveDashboard = $('#drive-dashboard');
 const driveLocation = driveDashboard?.querySelector('.drive-location');
@@ -11,6 +49,16 @@ function addConditionsStrip(dashboard, mode) {
   strip.className = `conditions-strip ${mode}-conditions panel`;
   strip.setAttribute('aria-label', 'Weather and road conditions');
   strip.innerHTML = '<div class="condition-item weather-condition"><span>WEATHER</span><strong class="weather-temperature"><i data-weather="temperature">—</i><small>°C</small></strong><small class="weather-summary" data-weather="summary">NO FEED</small><small data-weather="source">—</small></div><div class="condition-item nano-temperature"><span>CABIN TEMP · NANO</span><strong><b data-value="environment.temperature_c">—</b><small>°C</small></strong></div><div class="condition-item"><span>WIND / GUST</span><strong><b data-weather="wind">—</b></strong></div><div class="condition-item road-condition"><span>ROAD / 511 AB</span><strong data-road="condition">KEY REQUIRED</strong><small data-road="source">511 Alberta</small></div><section class="weather-detail" aria-label="Weather forecast details" hidden><header class="weather-detail-header"><div><span>OPEN-METEO · <b data-weather-detail="status">WAITING</b></span><strong data-weather-detail="headline">Conditions unavailable</strong></div><small data-weather-detail="location">—</small><small data-weather-detail="updated">—</small></header><div class="weather-current-grid"><div><span>FEELS LIKE</span><strong data-weather-detail="feels">—</strong></div><div><span>HUMIDITY</span><strong data-weather-detail="humidity">—</strong></div><div><span>CLOUD COVER</span><strong data-weather-detail="cloud">—</strong></div><div><span>PRESSURE</span><strong data-weather-detail="pressure">—</strong></div><div><span>VISIBILITY</span><strong data-weather-detail="visibility">—</strong></div><div><span>UV INDEX</span><strong data-weather-detail="uv">—</strong></div><div><span>PRECIP / RAIN / SHOWERS</span><strong data-weather-detail="precip">—</strong></div><div><span>SNOWFALL</span><strong data-weather-detail="snow">—</strong></div><div><span>WIND / GUST</span><strong data-weather-detail="wind">—</strong></div></div><div class="weather-forecast-block"><h3>2 DAY OUTLOOK</h3><div class="weather-daily-grid" data-weather-list="daily"></div></div><div class="weather-forecast-block"><h3>HOURLY · NEXT 12 HOURS</h3><div class="weather-hourly-list" data-weather-list="hourly"></div></div></section>';
+  const outlook = document.createElement('small');
+  outlook.dataset.weather = 'outlook';
+  outlook.textContent = 'NEXT 3H · —';
+  strip.querySelectorAll('.condition-item')[2].append(outlook);
+  const roadDetail = document.createElement('section');
+  roadDetail.className = 'road-detail';
+  roadDetail.setAttribute('aria-label', 'Nearest road report details');
+  roadDetail.hidden = true;
+  roadDetail.innerHTML = '<h3>NEAREST 511 ROAD REPORT</h3><div class="road-detail-grid"><div><span>ROAD / AREA</span><strong data-road-detail="roadway">—</strong></div><div><span>LOCATION</span><strong data-road-detail="location">—</strong></div><div><span>CONDITION</span><strong data-road-detail="condition">—</strong></div><div><span>OTHER CONDITIONS</span><strong data-road-detail="secondary">—</strong></div><div><span>VISIBILITY</span><strong data-road-detail="visibility">—</strong></div><div><span>REPORT DISTANCE</span><strong data-road-detail="distance">—</strong></div><div><span>REPORTED</span><strong data-road-detail="reported">—</strong></div><div><span>FEED CHECKED</span><strong data-road-detail="checked">—</strong></div></div><p data-road-detail="note">No report available.</p>';
+  strip.append(roadDetail);
   dashboard.prepend(strip);
   return strip;
 }
@@ -21,7 +69,7 @@ function addVehicleStrip(dashboard, mode) {
   const strip = document.createElement('section');
   strip.className = `vehicle-strip ${mode}-vehicle-strip panel`;
   strip.setAttribute('aria-label', 'OBD-II vehicle telemetry');
-  strip.innerHTML = '<div class="vehicle-strip-title">OBD-II</div><div class="vehicle-strip-metric"><span>SPEED</span><strong><b data-value="vehicle.speed_mph">—</b><small>MPH</small></strong></div><div class="vehicle-strip-metric"><span>RPM</span><strong><b data-value="vehicle.rpm">—</b></strong></div><div class="vehicle-strip-metric"><span>COOLANT</span><strong><b data-value="vehicle.coolant_c">—</b><small>°C</small></strong></div><div class="vehicle-strip-metric"><span>VOLTAGE</span><strong><b data-value="vehicle.voltage_v">—</b><small>V</small></strong></div><div class="vehicle-strip-metric"><span>ENGINE LOAD</span><strong><b data-value="vehicle.load_pct">—</b><small>%</small></strong></div><div class="vehicle-strip-metric"><span>DTC</span><strong><b data-value="vehicle.dtc_count">—</b></strong></div>';
+  strip.innerHTML = '<div class="vehicle-strip-title">OBD-II</div><div class="vehicle-strip-metric"><span>SPEED</span><strong><b data-value="vehicle.speed_mph">—</b><small>KM/H</small></strong></div><div class="vehicle-strip-metric"><span>RPM</span><strong><b data-value="vehicle.rpm">—</b></strong></div><div class="vehicle-strip-metric"><span>COOLANT</span><strong><b data-value="vehicle.coolant_c">—</b><small>°C</small></strong></div><div class="vehicle-strip-metric"><span>VOLTAGE</span><strong><b data-value="vehicle.voltage_v">—</b><small>V</small></strong></div><div class="vehicle-strip-metric"><span>ENGINE LOAD</span><strong><b data-value="vehicle.load_pct">—</b><small>%</small></strong></div><div class="vehicle-strip-metric"><span>DTC</span><strong><b data-value="vehicle.dtc_count">—</b></strong></div>';
   dashboard.append(strip);
   return strip;
 }
@@ -39,6 +87,10 @@ function addBearingReadout(container, source) {
 }
 addBearingReadout(driveAttitude?.querySelector('.compact-orientation'), driveLocation);
 const trailAttitude = adventureDashboard?.querySelector('.trail-attitude');
+const trailStatus = document.createElement('span');
+trailStatus.className = 'imu-label';
+trailStatus.textContent = 'IMU / —';
+trailAttitude?.querySelector(':scope > .label')?.append(trailStatus);
 addBearingReadout(trailAttitude, adventureDashboard?.querySelector('.trail-compass'));
 const adventureInfo = adventureDashboard?.querySelector('.adventure-info');
 const sundown = adventureInfo?.querySelector('.sundown');
@@ -50,10 +102,18 @@ driveConditions?.append(driveSundown);
 const recordButton = $('#record');
 const exportLogButton = $('#export-log');
 const exportGpsTrackButton = $('#export-gps-track');
+const exportAllRecordingsButton = $('#export-all-recordings');
+const recordingIndicator = $('.brand');
+const recordingSummary = document.createElement('div');
+recordingSummary.className = 'recording-summary';
+recordingSummary.setAttribute('aria-label', 'Latest trip summary');
+recordingSummary.innerHTML = '<div><span>TRIP</span><strong data-trip="state">NO LOG</strong></div><div><span>ELAPSED</span><strong data-trip="elapsed">—</strong></div><div><span>DISTANCE</span><strong data-trip="distance">—</strong></div><div><span>MOVING</span><strong data-trip="moving">—</strong></div><div><span>GPS FIXES</span><strong data-trip="fixes">—</strong></div><div><span>LAST FIX</span><strong data-trip="last-fix">—</strong></div>';
+$('.recording-tools .recording-actions')?.before(recordingSummary);
 let recordingState = {recording: false, recording_id: null, latest_recording_id: null};
 recordButton.addEventListener('click', toggleRecording);
 exportLogButton.addEventListener('click', () => downloadRecording('log'));
 exportGpsTrackButton.addEventListener('click', () => downloadRecording('gps-track.gpx'));
+exportAllRecordingsButton.addEventListener('click', downloadAllRecordings);
 
 const launchParameters = new URLSearchParams(window.location.search);
 let eventHoldUntil = 0;
@@ -65,18 +125,57 @@ window.dashboardEvent = showEvent;
 
 function updateRecordingControls(state) {
   recordingState = state;
+  recordingIndicator.classList.toggle('recording-active', Boolean(state.recording));
+  recordingIndicator.setAttribute('aria-label', state.recording
+    ? 'OVRLand — recording active' : 'OVRLand — Operational Vehicle Readout');
   const recordNote = $('#record-note');
   $('#record-label').textContent = state.recording ? '■ STOP RECORDING' : '● RECORD';
   recordButton.setAttribute('aria-pressed', String(Boolean(state.recording)));
   recordButton.classList.toggle('recording-active', Boolean(state.recording));
   recordNote.textContent = state.error ? 'LOG WRITE ERROR'
+    : state.summary?.recovery_warning ? `RECOVERY WARNING · ${state.summary.recovery_warning}`
     : state.recording ? `RECORDING SINCE ${new Date(state.started_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`
       : state.latest_recording_id ? 'LAST LOG READY · EXPORT AVAILABLE' : 'START FULL DATA LOG';
   const exportId = state.recording_id || state.latest_recording_id;
   exportLogButton.disabled = !exportId;
   exportGpsTrackButton.disabled = !exportId;
+  exportAllRecordingsButton.disabled = !state.latest_recording_id;
   const recordTarget = moduleTargets.camp.find(([key]) => key === 'record');
   if (recordTarget) recordTarget[2] = state.recording ? 'STOP RECORDING' : 'START RECORDING';
+  renderRecordingSummary();
+}
+
+function elapsedLabel(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—';
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+}
+
+function ageLabel(stamp, unixSeconds = false) {
+  const time = unixSeconds ? Number(stamp) * 1000 : Date.parse(stamp);
+  if (!Number.isFinite(time) || time <= 0) return 'TIME UNKNOWN';
+  const minutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
+  return minutes < 1 ? 'JUST NOW' : minutes < 60 ? `${minutes}M AGO`
+    : minutes < 1440 ? `${Math.floor(minutes / 60)}H AGO` : `${Math.floor(minutes / 1440)}D AGO`;
+}
+
+function renderRecordingSummary() {
+  const summary = recordingState.summary;
+  const set = (key, value) => { const node = recordingSummary.querySelector(`[data-trip="${key}"]`); if (node) node.textContent = value; };
+  set('state', recordingState.recording ? 'RECORDING' : summary ? 'LAST LOG' : 'NO LOG');
+  if (!summary) {
+    for (const key of ['elapsed', 'distance', 'moving', 'fixes', 'last-fix']) set(key, '—');
+    return;
+  }
+  const start = Date.parse(summary.started_at);
+  const end = recordingState.recording ? Date.now() : Date.parse(summary.stopped_at);
+  set('elapsed', elapsedLabel((end - start) / 1000));
+  const hasTrack = Number.isFinite(summary.fix_count) && summary.fix_count >= 2;
+  set('distance', hasTrack && Number.isFinite(summary.distance_km) ? `${summary.distance_km.toFixed(1)} km` : '—');
+  set('moving', hasTrack ? elapsedLabel(summary.moving_seconds) : '—');
+  set('fixes', Number.isFinite(summary.fix_count) ? String(summary.fix_count) : '—');
+  set('last-fix', summary.last_fix_at ? ageLabel(summary.last_fix_at) : 'NO GPS FIX');
 }
 
 async function refreshRecordingStatus() {
@@ -107,9 +206,18 @@ async function toggleRecording() {
   }
 }
 
-function downloadRecording(kind) {
+async function downloadRecording(kind) {
   const recordingId = recordingState.recording_id || recordingState.latest_recording_id;
   if (!recordingId) return;
+  if (kind === 'log') {
+    try {
+      const check = await fetch(`/api/recordings/${encodeURIComponent(recordingId)}/log?check=1`);
+      if (!check.ok) throw new Error(await check.text() || 'Log export unavailable');
+    } catch (error) {
+      showEvent(`RECORDING / EXPORT FAILED · ${(error.message || 'LOG UNAVAILABLE').toUpperCase()}`, 6000);
+      return;
+    }
+  }
   const link = document.createElement('a');
   link.href = `/api/recordings/${encodeURIComponent(recordingId)}/${kind}`;
   link.download = '';
@@ -119,8 +227,29 @@ function downloadRecording(kind) {
   showEvent(kind === 'log' ? 'RECORDING / DOWNLOADING FULL LOG' : 'RECORDING / DOWNLOADING GPS TRACK', 3000);
 }
 
+async function downloadAllRecordings() {
+  if (!recordingState.latest_recording_id) return;
+  try {
+    const check = await fetch('/api/recordings/export-all.zip?check=1');
+    if (!check.ok) throw new Error(await check.text() || 'Export unavailable');
+    const result = await check.json();
+    if (!result.ready) throw new Error('No recording logs are available');
+  } catch (error) {
+    showEvent(`RECORDING / EXPORT FAILED · ${(error.message || 'CHECK STORAGE').toUpperCase()}`, 6000);
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = '/api/recordings/export-all.zip';
+  link.download = '';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  showEvent('RECORDING / DOWNLOADING ALL SAVED LOGS', 4000);
+}
+
 refreshRecordingStatus();
 window.setInterval(refreshRecordingStatus, 5000);
+window.setInterval(renderRecordingSummary, 30000);
 
 // The Pi launcher marks only the initial boot window as a startup. Window-mode
 // relaunches deliberately omit this flag so the welcome voice does not repeat.
@@ -186,12 +315,16 @@ const moduleTargets = {
     ['spotify', '.spotify-portal', 'SPOTIFY'],
   ],
   camp: [
+    ['capture-day', '[data-ambient-capture="day"]', 'CAPTURE DAY'],
+    ['capture-dusk', '[data-ambient-capture="dusk"]', 'CAPTURE DUSK'],
+    ['capture-night', '[data-ambient-capture="night"]', 'CAPTURE NIGHT'],
+    ['record', '#record', 'START RECORDING'],
+    ['export-log', '#export-log', 'EXPORT LATEST LOG'],
+    ['export-gps-track', '#export-gps-track', 'EXPORT LATEST GPS TRACK'],
+    ['export-all-recordings', '#export-all-recordings', 'EXPORT ALL LOGS'],
     ['window-mode', '#window-mode-toggle', 'CAMP MODE / FULL SCREEN'],
     ['stop-app', '[data-system-action="stop-app"]', 'STOP APP'],
     ['poweroff-pi', '[data-system-action="poweroff-pi"]', 'POWER OFF PI'],
-    ['record', '#record', 'START RECORDING'],
-    ['export-log', '#export-log', 'EXPORT FULL LOG'],
-    ['export-gps-track', '#export-gps-track', 'EXPORT GPS TRACK'],
   ],
 };
 function activeModules() { return moduleTargets[$('body').dataset.mode] ?? []; }
@@ -201,6 +334,8 @@ function clearJoystickFocus() {
     .forEach(item => item.classList.remove('joy-section-focus'));
 }
 function setModuleFocus(index) {
+  const next = activeModules()[index];
+  if (systemHold.action && systemHold.origin !== `${$('body').dataset.mode}:${next?.[0]}:${joySession}`) cancelSystemHold();
   navigationLayer = 'modules';
   const targets = activeModules();
   const target = targets.length ? targets[(index + targets.length) % targets.length] : null;
@@ -209,7 +344,11 @@ function setModuleFocus(index) {
   // soon as DOWN enters module navigation so the visible focus follows the
   // joystick layer.
   clearJoystickFocus();
-  if (target) $(target[1])?.classList.add('joy-section-focus');
+  const targetNode = target && $(target[1]);
+  if (targetNode) {
+    targetNode.classList.add('joy-section-focus');
+    targetNode.scrollIntoView({block: 'nearest', inline: 'nearest'});
+  }
   if (target) $('#event').textContent = $('body').dataset.mode === 'camp'
     ? `FOCUS / ${target[2]} — PRESS TO ACTIVATE`
     : `FOCUS / ${target[2]} — PRESS TO OPEN DETAIL`;
@@ -253,6 +392,7 @@ function focusMode(index) {
   focusIndex = (index + modeButtons.length) % modeButtons.length;
   clearJoystickFocus();
   modeButtons.forEach((button, i) => button.classList.toggle('joy-focus', i === focusIndex));
+  modeButtons[focusIndex].scrollIntoView({block: 'nearest', inline: 'nearest'});
 }
 
 function enableTouchModules() {
@@ -288,6 +428,7 @@ function activeModulesForTouch() {
 enableTouchModules();
 for (const [i, button] of modeButtons.entries()) {
   button.addEventListener('click', () => {
+    cancelSystemHold();
     document.body.dataset.mode = button.dataset.mode;
     focusMode(i);
     for (const item of modeButtons) {
@@ -303,7 +444,7 @@ for (const [i, button] of modeButtons.entries()) {
     window.navball?.refresh();
   });
 }
-const launchedWindowMode = launchParameters.get('window');
+let launchedWindowMode = launchParameters.get('window');
 const windowModeButton = $('#window-mode-toggle');
 if (launchedWindowMode === 'camp') windowModeButton.textContent = '⛶ FULL SCREEN';
 async function toggleWindowMode() {
@@ -312,8 +453,11 @@ async function toggleWindowMode() {
     const response = await fetch(`/api/window-mode/${requestedMode}`, {method: 'POST'});
     if (!response.ok) throw new Error('Window mode unavailable');
     windowModeButton.disabled = true;
+    launchedWindowMode = requestedMode;
+    windowModeButton.textContent = requestedMode === 'camp' ? '⛶ FULL SCREEN' : 'CAMP MODE';
+    window.setTimeout(() => { windowModeButton.disabled = false; }, 1600);
     showEvent(requestedMode === 'camp'
-      ? 'OPENING CAMP MODE — returning OVRLand to a desktop window…'
+      ? 'OPENING CAMP MODE — returning OVRLand to the desktop…'
       : 'RETURNING TO FULL SCREEN…', 5000);
   } catch { showEvent('Window mode unavailable. Press Alt+F4 to return to the desktop.', 5000); }
 }
@@ -325,15 +469,16 @@ let movedDetailNode = null;
 let detailRestore = null;
 let detailNavballCleanup = null;
 let detailModuleKey = null;
-let systemHoldAction = null;
-let systemHoldStartedAt = null;
+const systemHold = new SystemHoldGuard(2000);
 let detailControlIndex = 0;
 let musicStreams = [];
 let musicStreamsLoading = false;
 let musicStreamsError = '';
+// Keep the panel reference when openDetail moves it out of the dashboard.
+const radioPanel = musicDashboard.querySelector('.radio-portal');
 const radioAudio = new Audio();
 radioAudio.preload = 'none';
-radioAudio.volume = 0.8;
+radioAudio.volume = 0.9;
 let activeRadioStream = null;
 let radioFailure = null;
 let currentRadioTrack = null;
@@ -341,21 +486,21 @@ let trackMetadataUnavailable = false;
 let nowPlayingRequest = 0;
 function renderBrowserRadio(state) {
   const station = activeRadioStream;
-  const stationNode = musicDashboard.querySelector('[data-music="station"]');
-  musicDashboard.querySelector('[data-music="preset"]').textContent = 'OVRLAND RADIO';
+  const stationNode = radioPanel.querySelector('[data-music="station"]');
+  radioPanel.querySelector('[data-music="preset"]').textContent = 'OVRLAND RADIO';
   stationNode.textContent = station ? `${station.station_name} · ${station.provider}` : '';
   stationNode.hidden = !station;
-  musicDashboard.querySelector('[data-music="title"]').textContent =
+  radioPanel.querySelector('[data-music="title"]').textContent =
     currentRadioTrack?.title || station?.display_name || 'Choose a station';
   const stationLabel = station ? `${station.station_name} · ${station.provider}` : 'Internet radio';
-  musicDashboard.querySelector('[data-music="artist"]').textContent = currentRadioTrack?.artist
+  radioPanel.querySelector('[data-music="artist"]').textContent = currentRadioTrack?.artist
     || (trackMetadataUnavailable ? `TRACK INFO UNAVAILABLE · ${stationLabel}`
       : (currentRadioTrack ? stationLabel : (station ? 'LOADING TRACK INFO…' : stationLabel)));
-  musicDashboard.querySelector('[data-music="state"]').textContent = state;
-  musicDashboard.querySelector('[data-music="position"]').textContent = radioFailure
+  radioPanel.querySelector('[data-music="state"]').textContent = state;
+  radioPanel.querySelector('[data-music="position"]').textContent = radioFailure
     ? `ERROR ${radioAudio.error?.code ?? ''}` : (radioAudio.paused ? '—' : 'LIVE');
-  musicDashboard.querySelector('[data-music="volume"]').textContent = `${Math.round(radioAudio.volume * 100)}%`;
-  musicDashboard.querySelector('[data-music="availability"]').textContent =
+  radioPanel.querySelector('[data-music="volume"]').textContent = `${Math.round(radioAudio.volume * 100)}%`;
+  radioPanel.querySelector('[data-music="availability"]').textContent =
     radioFailure || (state === 'UNAVAILABLE' ? 'RADIO STREAM UNAVAILABLE' : 'BROWSER RADIO · READY');
 }
 radioAudio.addEventListener('playing', () => {
@@ -393,6 +538,7 @@ async function refreshNowPlaying(streamId) {
   const requestId = ++nowPlayingRequest;
   const unavailable = () => {
     if (requestId !== nowPlayingRequest || activeRadioStream?.id !== streamId) return;
+    currentRadioTrack = null;
     trackMetadataUnavailable = true;
     renderBrowserRadio(radioAudio.paused ? 'PAUSED' : 'PLAYING');
   };
@@ -452,8 +598,7 @@ ensureMusicStreams().catch(error => {
   musicStreamsError = error.message || 'Curated stations unavailable';
 });
 function cancelSystemHold() {
-  systemHoldAction = null;
-  systemHoldStartedAt = null;
+  systemHold.cancel(true);
   if ($('#system-status')) $('#system-status').textContent = 'SYSTEM STANDBY';
 }
 function joystick(data) {
@@ -474,16 +619,14 @@ function joystick(data) {
     focusMode(modeButtons.findIndex(button => button.classList.contains('active')));
     return;
   }
-  if (systemHoldAction && joy.pressed && systemHoldStartedAt !== null && now - systemHoldStartedAt >= 2000) {
-    const action = systemHoldAction;
-    systemHoldAction = null;
-    systemHoldStartedAt = null;
-    runSystemAction(action);
-  }
-  if (systemHoldAction && !joy.pressed) {
-    systemHoldAction = null;
-    systemHoldStartedAt = null;
-    $('#system-status').textContent = 'SYSTEM STANDBY';
+  const holdOrigin = `${$('body').dataset.mode}:${activeModules()[moduleIndex]?.[0]}:${joySession}`;
+  const pendingEvents = meta.events.filter(event => event.id > lastEvent);
+  const joystickHoldPending = Boolean(systemHold.action);
+  const confirmedAction = systemHold.update({origin: holdOrigin, events: pendingEvents,
+    pressed: joy.pressed, now});
+  if (confirmedAction) runSystemAction(confirmedAction);
+  else if (joystickHoldPending && !systemHold.action) {
+    $('#system-status').textContent = joy.pressed ? 'SYSTEM STANDBY — RELEASE TO REARM' : 'SYSTEM STANDBY';
   }
   for (const event of meta.events) {
     if (event.id <= lastEvent) continue;
@@ -505,15 +648,17 @@ function joystick(data) {
       if (detailOpen) activateDetailControl();
       else if (navigationLayer === 'tabs') modeButtons[focusIndex].click();
       else if ($('body').dataset.mode === 'camp') {
-        const action = activeModules()[moduleIndex]?.[0] ?? null;
+        const target = activeModules()[moduleIndex];
+        const action = target?.[0] ?? null;
         if (action === 'window-mode') windowModeButton.click();
-        else if (['record', 'export-log', 'export-gps-track'].includes(action)) {
-          $(activeModules()[moduleIndex]?.[1])?.click();
+        else if (action?.startsWith('capture-') ||
+                 ['record', 'export-log', 'export-gps-track', 'export-all-recordings'].includes(action)) {
+          $(target[1])?.click();
         }
-        else {
-          systemHoldAction = action;
-          systemHoldStartedAt = systemHoldAction ? now : null;
-          if (systemHoldAction) $('#system-status').textContent = 'HOLD BUTTON FOR 2 SECONDS TO CONFIRM';
+        else if (['stop-app', 'poweroff-pi'].includes(action)) {
+          if (systemHold.arm(action, holdOrigin, now)) {
+            $('#system-status').textContent = 'HOLD BUTTON FOR 2 SECONDS TO CONFIRM';
+          }
         }
       } else openDetail(activeModules()[moduleIndex]?.[0]);
     }
@@ -595,6 +740,7 @@ function setDetailFocus(index) {
   const control = controls[detailControlIndex];
   const button = control && $(`[data-detail-control="${control.key}"]`);
   button?.classList.add('joy-detail-focus');
+  button?.scrollIntoView({block: 'nearest', inline: 'nearest'});
   if (control) $('#event').textContent = `FOCUS / ${control.label} — PRESS TO SELECT`;
 }
 function activateDetailControl(key = activeDetailControls()[detailControlIndex]?.key) {
@@ -656,6 +802,7 @@ function applyCurrentCalibration() {
   return true;
 }
 function openDetail(key) {
+  cancelSystemHold();
   const module = focusedModule();
   if (!module || module.key !== key) return;
   const dashboard = $(`#${$('body').dataset.mode}-dashboard`);
@@ -663,7 +810,10 @@ function openDetail(key) {
     : $('body').dataset.mode === 'camp' ? $(module.selector) : dashboard?.querySelector(module.selector);
   if (!panel) return;
   if (key === 'location') $('#gps-detail').hidden = false;
-  if (key === 'conditions') panel.querySelector('.weather-detail').hidden = false;
+  if (key === 'conditions') {
+    panel.querySelector('.weather-detail').hidden = false;
+    panel.querySelector('.road-detail').hidden = false;
+  }
   // The detail control replaces the originating module as the sole visible
   // focus target. closeDetail restores the outline to this module.
   clearJoystickFocus();
@@ -714,12 +864,15 @@ function openDetail(key) {
   });
 }
 function closeDetail() {
+  cancelSystemHold();
   detailNavballCleanup?.();
   if (movedDetailNode && detailRestore) {
     const gpsDetail = movedDetailNode.querySelector('#gps-detail');
     if (gpsDetail) gpsDetail.hidden = true;
     const weatherDetail = movedDetailNode.querySelector('.weather-detail');
     if (weatherDetail) weatherDetail.hidden = true;
+    const roadDetail = movedDetailNode.querySelector('.road-detail');
+    if (roadDetail) roadDetail.hidden = true;
     const wasMap = Boolean(movedDetailNode.querySelector('#street-map'));
     movedDetailNode.classList.remove('detail-module-panel');
     detailRestore.parent.insertBefore(movedDetailNode, detailRestore.next);
@@ -789,25 +942,49 @@ async function runSystemAction(action) {
     status.textContent = 'ACTION FAILED — CHECK APP SERVICE';
   }
 }
-for (const button of document.querySelectorAll('[data-system-action]')) {
+function bindSystemHold(button) {
   let holdTimer = null;
+  let activePointer = null;
   const status = $('#system-status');
-  const cancel = () => {
-    if (holdTimer) window.clearTimeout(holdTimer);
+  const clearHold = (resetStatus = true) => {
+    const pointer = activePointer;
+    if (pointer === null) return;
+    if (holdTimer !== null) window.clearTimeout(holdTimer);
     holdTimer = null;
-    if (!button.disabled) status.textContent = 'SYSTEM STANDBY';
+    activePointer = null;
+    if (button.hasPointerCapture(pointer)) button.releasePointerCapture(pointer);
+    if (resetStatus && !button.disabled) status.textContent = 'SYSTEM STANDBY';
   };
-  button.addEventListener('pointerdown', () => {
+  button.addEventListener('pointerdown', event => {
+    if (button.disabled || event.isPrimary === false || event.button !== 0 || activePointer !== null) return;
+    event.preventDefault();
+    activePointer = event.pointerId;
+    button.setPointerCapture(activePointer);
     status.textContent = 'HOLDING — KEEP PRESSED FOR 2 SECONDS';
     holdTimer = window.setTimeout(() => {
-      holdTimer = null;
+      clearHold(false);
       runSystemAction(button.dataset.systemAction);
     }, 2000);
   });
-  button.addEventListener('pointerup', cancel);
-  button.addEventListener('pointercancel', cancel);
-  button.addEventListener('pointerleave', cancel);
+  const cancelPointer = event => {
+    if (event.pointerId === activePointer) clearHold();
+  };
+  button.addEventListener('pointerup', cancelPointer);
+  button.addEventListener('pointercancel', cancelPointer);
+  button.addEventListener('lostpointercapture', cancelPointer);
+  button.addEventListener('pointermove', event => {
+    if (event.pointerId !== activePointer) return;
+    const bounds = button.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right ||
+        event.clientY < bounds.top || event.clientY > bounds.bottom) clearHold();
+  });
+  button.addEventListener('contextmenu', event => event.preventDefault());
+  window.addEventListener('blur', () => clearHold());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearHold();
+  });
 }
+for (const button of document.querySelectorAll('[data-system-action]')) bindSystemHold(button);
 function formatAmbientLightReading(current) {
   if (!current?.available) return `NANO / ${(current?.nano_status || 'UNAVAILABLE').toUpperCase()} — RGB NOT READY`;
   const rgb = current.rgb.map(value => Number.isFinite(value) ? String(Math.round(value)) : '—').join(' / ');
@@ -994,9 +1171,9 @@ function renderGpsDetail(data) {
   set('vdop', Number.isFinite(gps.dop?.vdop) ? gps.dop.vdop.toFixed(1) : '—');
   set('pdop', Number.isFinite(gps.dop?.pdop) ? gps.dop.pdop.toFixed(1) : '—');
   set('speed', Number.isFinite(gps.speed_mps)
-    ? `${(gps.speed_mps * 2.236936).toFixed(1)} mph` : '—');
+    ? `${(gps.speed_mps * 3.6).toFixed(1)} km/h` : '—');
   set('speed-error', Number.isFinite(gps.speed_accuracy_mps)
-    ? `${(gps.speed_accuracy_mps * 2.236936).toFixed(1)} mph` : '—');
+    ? `${(gps.speed_accuracy_mps * 3.6).toFixed(1)} km/h` : '—');
   set('climb', Number.isFinite(gps.climb_mps)
     ? `${gps.climb_mps >= 0 ? '+' : ''}${gps.climb_mps.toFixed(2)} m/s` : '—');
   set('fix-age', Number.isFinite(gps.age_ms) ? `${(gps.age_ms / 1000).toFixed(1)} s` : '—');
@@ -1023,8 +1200,9 @@ function renderWeatherDetail(weather) {
   metric('status', status);
   metric('headline', weather.summary || 'Conditions unavailable');
   metric('location', weather.location_source === 'gps' ? 'GPS LOCATION'
+    : weather.location_source === 'last_gps' ? 'LAST GPS LOCATION'
     : weather.location_source === 'default' ? 'CONFIGURED DEFAULT' : 'SIMULATED LOCATION');
-  metric('updated', weather.observed_at ? `LOCAL OBSERVATION · ${time(weather.observed_at)}` : 'NO OBSERVATION TIME');
+  metric('updated', weather.updated_at ? `FEED CHECKED ${ageLabel(weather.updated_at)} · MODEL TIME ${time(weather.observed_at)}` : 'NO FEED TIME');
   metric('feels', `${number(weather.apparent_temperature_c)} °C`);
   metric('humidity', `${number(weather.humidity_pct)}%`);
   metric('cloud', `${number(weather.cloud_cover_pct)}%`);
@@ -1081,22 +1259,61 @@ function render(data) {
   const temperature = Number.isFinite(weather.temperature_c) ? `${Math.round(weather.temperature_c)}` : '—';
   const wind = Number.isFinite(weather.wind_speed_kmh)
     ? `${Math.round(weather.wind_speed_kmh)} km/h · G ${Number.isFinite(weather.wind_gust_kmh) ? Math.round(weather.wind_gust_kmh) : '—'}` : '—';
-  setWeather('summary', weatherStatus ? (weather.summary || 'CONDITIONS') : 'NO FEED');
+  setWeather('summary', weather.status === 'stale' ? `STALE · ${weather.summary || 'CONDITIONS'}`
+    : weatherStatus ? (weather.summary || 'CONDITIONS') : 'NO FEED');
   setWeather('temperature', temperature);
   setWeather('wind', wind);
   setWeather('source', weather.location_source === 'default' ? 'CONFIGURED DEFAULT · OPEN-METEO'
-    : weather.location_source === 'gps' ? 'GPS LOCATION · OPEN-METEO' : weatherStatus ? 'SIMULATED' : 'WAITING FOR DATA');
+    : weather.location_source === 'gps' ? 'GPS LOCATION · OPEN-METEO'
+      : weather.location_source === 'last_gps' ? 'LAST GPS LOCATION · OPEN-METEO'
+        : weatherStatus ? 'SIMULATED' : 'WAITING FOR DATA');
+  if (weather.updated_at) document.querySelectorAll('[data-weather="source"]').forEach(node => {
+    node.textContent += ` · CHECKED ${ageLabel(weather.updated_at)}`;
+  });
+  const upcoming = Array.isArray(weather.hourly_forecast) ? weather.hourly_forecast.slice(0, 3) : [];
+  const chances = upcoming.map(hour => hour.precipitation_probability_pct).filter(Number.isFinite);
+  const gusts = upcoming.map(hour => hour.wind_gust_kmh).filter(Number.isFinite);
+  const maxChance = chances.length ? `${Math.round(Math.max(...chances))}%` : '—';
+  const maxGust = gusts.length ? `${Math.round(Math.max(...gusts))} KM/H` : '—';
+  const lowVisibility = upcoming.some(hour => Number.isFinite(hour.visibility_m) && hour.visibility_m < 1000);
+  const outlook = upcoming.length ? `${weather.status === 'stale' ? 'STALE · ' : ''}NEXT 3H · PRECIP ${maxChance} · GUST ${maxGust}${lowVisibility ? ' · LOW VIS' : ''}` : 'NEXT 3H · NO FORECAST';
+  document.querySelectorAll('[data-weather="outlook"]').forEach(node => { node.textContent = outlook; });
   const roadCondition = road.status === 'not_configured' ? 'KEY REQUIRED'
-    : road.status === 'unavailable' || road.status === 'stale' ? 'FEED UNAVAILABLE'
+    : road.status === 'stale' ? `STALE · ${road.condition || 'NO REPORT'}`
+      : road.status === 'unavailable' ? 'FEED UNAVAILABLE'
+      : road.status === 'waiting_location' ? 'WAITING FOR LOCATION'
       : road.report_status === 'no_report_nearby' ? 'NO REPORT NEARBY'
         : road.status === 'mock' ? (road.condition || 'SIMULATED')
-          : road.status === 'live' ? (road.condition || 'NO REPORT') : 'WAITING';
+          : road.status === 'live' ? (road.condition || 'NO REPORT')
+            : road.diagnostics?.phase === 'fetching' ? 'FETCHING' : 'WAITING';
   document.querySelectorAll('[data-road="condition"]').forEach(node => { node.textContent = roadCondition; });
   const roadSource = road.status === 'not_configured' ? 'ADD OVRLAND_511_API_KEY'
-    : road.location_source === 'default' ? 'CALGARY DEFAULT · 511 ALBERTA'
-      : road.location_source === 'gps' ? 'GPS LOCATION · 511 ALBERTA'
+    : ['unavailable', 'stale'].includes(road.status) && road.diagnostics?.last_error
+      ? `${road.diagnostics.last_error.message} · RETRYING`
+    : road.location_source === 'default' ? `${road.location_name || 'CONFIGURED LOCATION'} · 511 ALBERTA`
+    : road.location_source === 'gps' ? 'GPS LOCATION · 511 ALBERTA'
+      : road.location_source === 'last_gps' ? 'LAST GPS LOCATION · 511 ALBERTA'
         : road.status === 'mock' ? 'SIMULATED' : '511 ALBERTA';
   document.querySelectorAll('[data-road="source"]').forEach(node => { node.textContent = roadSource; });
+  if (road.last_updated || road.updated_at) document.querySelectorAll('[data-road="source"]').forEach(node => {
+    node.textContent += road.last_updated ? ` · REPORT ${ageLabel(road.last_updated, true)}` : '';
+    if (road.status === 'stale' && road.updated_at) node.textContent += ` · CHECKED ${ageLabel(road.updated_at)}`;
+  });
+  const roadDetail = (key, value) => document.querySelectorAll(`[data-road-detail="${key}"]`).forEach(node => { node.textContent = value; });
+  const list = value => Array.isArray(value) ? value.filter(Boolean).join(', ') : typeof value === 'string' ? value : '';
+  roadDetail('roadway', [road.roadway, road.area].filter(Boolean).join(' · ') || '—');
+  roadDetail('location', road.location_description || '—');
+  roadDetail('condition', road.condition || '—');
+  roadDetail('secondary', list(road.secondary_conditions) || '—');
+  roadDetail('visibility', road.visibility || '—');
+  roadDetail('distance', Number.isFinite(road.distance_km) ? `${road.distance_km.toFixed(1)} km` : '—');
+  roadDetail('reported', road.last_updated ? ageLabel(road.last_updated, true) : 'TIME UNKNOWN');
+  roadDetail('checked', road.updated_at ? ageLabel(road.updated_at) : 'TIME UNKNOWN');
+  roadDetail('note', road.status === 'stale' ? 'Cached report; the latest feed check failed.'
+    : road.report_status === 'no_report_nearby' ? 'No 511 road report within the configured 35 km radius.'
+      : road.status === 'not_configured' ? 'Add a 511 Alberta developer key to enable reports.'
+        : road.status === 'mock' ? 'Simulated demonstration report.'
+        : road.report_status === 'reported' ? 'Nearest reported segment, not necessarily your current road.' : 'No current road report available.');
   renderSundown(data);
   const rawPitch = wholeDegree(data.attitude.pitch_deg);
   const rawRoll = wholeDegree(data.attitude.roll_deg);
@@ -1110,9 +1327,12 @@ function render(data) {
     else if (field.dataset.value === 'location.altitude_m') field.textContent = Number.isFinite(value) ? String(Math.round(value)) : '—';
     else if (field.dataset.value === 'location.heading_deg') field.textContent = Number.isFinite(value)
       ? String(((Math.round(value) % 360) + 360) % 360) : '—';
+    else if (field.dataset.value === 'vehicle.speed_mph') field.textContent = Number.isFinite(value)
+      ? String(Math.round(value * 1.60934)) : '—';
     else field.textContent = value ?? '—';
   }
-  $('#data-mode-label').textContent = live ? 'LIVE HARDWARE TEST' : 'SIMULATED DATA';
+  $('#data-mode-label').hidden = live;
+  $('#data-mode-label').textContent = live ? '' : 'SIMULATED DATA';
   $('#obd-label').textContent = live ? 'OBD / UNAVAILABLE' : 'OBD / DEMO';
   const gpsStatusLabels = {live: 'FIX LIVE', connected: 'GPSD LINK', no_fix: 'NO FIX', stale: 'FIX STALE', disconnected: 'OFFLINE', unavailable: 'UNAVAILABLE'};
   $('#gps-label').textContent = live
@@ -1153,7 +1373,9 @@ function render(data) {
     field.classList.toggle('source-connected', source === 'gps' ? status === 'live' : ['live', 'connected'].includes(status));
   }
   document.querySelectorAll('[data-gauge]').forEach(gauge => {
-    const value = gauge.dataset.gauge.split('.').reduce((item, key) => item?.[key], data);
+    const rawValue = gauge.dataset.gauge.split('.').reduce((item, key) => item?.[key], data);
+    const value = gauge.dataset.gauge === 'vehicle.speed_mph' && Number.isFinite(rawValue)
+      ? rawValue * 1.60934 : rawValue;
     const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value / Number(gauge.dataset.max) * 100)) : 0;
     gauge.querySelector('.gauge-fill').style.strokeDasharray = `${percent} 100`;
   });
@@ -1166,13 +1388,19 @@ function render(data) {
   joystick(data);
   lastReceived = Date.now();
   document.body.classList.remove('stale');
-  $('#connection').textContent = live ? `API CONNECTED / NANO ${data.sources.nano.toUpperCase()}` : 'MOCK FEED / CONNECTED';
+  $('#connection').textContent = 'DATA FEED CONNECTED';
 }
 function stale() {
   document.body.classList.add('stale');
   window.latestTelemetry = null;
   cancelSystemHold();
   $('#connection').textContent = 'FEED LOST / RECONNECTING';
+  document.querySelectorAll('[data-road="source"]').forEach(node => {
+    node.textContent = 'FEED LOST · LAST 511 REPORT MAY BE STALE';
+  });
+  document.querySelectorAll('[data-road-detail="note"]').forEach(node => {
+    node.textContent = 'FEED LOST — cached values below are not current. Waiting for a fresh telemetry update.';
+  });
   for (const field of document.querySelectorAll('[data-value]')) field.textContent = '—';
   for (const source of ['gps', 'nano', 'obd', 'network']) {
     const field = $(`#${source}-state`);

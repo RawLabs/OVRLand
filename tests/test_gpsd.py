@@ -1,12 +1,48 @@
 import json
+import tempfile
+import threading
+import time
 import time
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from adapters.gpsd import GPSD, WATCH, normalize_tpv
 
 
 class GPSDTests(unittest.TestCase):
+    def test_last_valid_location_survives_fix_loss_and_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'last_gps_location.json'
+            gps = GPSD(last_location_file=path)
+            gps._accept({'class': 'TPV', 'mode': 2, 'lat': 40.1, 'lon': -111.2})
+            self.assertEqual(json.loads(path.read_text())['latitude'], 40.1)
+
+            gps._accept({'class': 'TPV', 'mode': 1})
+            self.assertIsNone(gps.snapshot()['data'])
+            self.assertEqual(gps.snapshot()['last_location']['longitude'], -111.2)
+            self.assertEqual(GPSD(last_location_file=path).snapshot()['last_location']['latitude'], 40.1)
+
+            gps.last_location['latitude'] = 40.2
+            gps.stop()
+            self.assertEqual(GPSD(last_location_file=path).snapshot()['last_location']['latitude'], 40.2)
+
+            path.write_text('{"latitude": 200, "longitude": -111.2}')
+            self.assertIsNone(GPSD(last_location_file=path).snapshot()['last_location'])
+
+    def test_weather_uses_last_gps_without_showing_a_current_fix(self):
+        import app
+        last_location = {'latitude': 40.1, 'longitude': -111.2, 'received_at': 'earlier'}
+        with patch.object(app, 'MODE', 'live'), \
+             patch.object(app.nano, 'snapshot', return_value={'status': 'unavailable', 'data': None}), \
+             patch.object(app.gps, 'snapshot', return_value={
+                 'status': 'no_fix', 'data': None, 'last_location': last_location}), \
+             patch.object(app.weather, 'set_location') as set_weather:
+            data = app.snapshot()
+        set_weather.assert_called_once_with(40.1, -111.2, 'last_gps')
+        self.assertIsNone(data['location']['latitude'])
+        self.assertEqual(data['sources']['gps'], 'no_fix')
+
     def test_fix_loss_clears_location_immediately_and_recovers(self):
         gps = GPSD()
         fix = {'class': 'TPV', 'mode': 3, 'lat': 40.1, 'lon': -111.2, 'track': 27}
@@ -31,6 +67,27 @@ class GPSDTests(unittest.TestCase):
         gps._accept(dict(fix, lat=40.2))
         self.assertEqual(gps.snapshot()['status'], 'live')
         self.assertEqual(gps.snapshot()['data']['latitude'], 40.2)
+
+    def test_slow_persistence_does_not_hold_gps_snapshot_lock(self):
+        entered, release = threading.Event(), threading.Event()
+        with tempfile.TemporaryDirectory() as directory:
+            gps = GPSD(last_location_file=Path(directory) / 'location.json')
+            def slow_save(_location):
+                entered.set()
+                release.wait(2)
+            gps._save_last_location = slow_save
+            worker = threading.Thread(target=gps._accept, args=(
+                {'class': 'TPV', 'mode': 3, 'lat': 40.1, 'lon': -111.2},))
+            worker.start()
+            try:
+                self.assertTrue(entered.wait(1))
+                start = time.monotonic()
+                self.assertEqual(gps.snapshot()['data']['latitude'], 40.1)
+                self.assertLess(time.monotonic() - start, .1)
+            finally:
+                release.set()
+                worker.join(2)
+            self.assertFalse(worker.is_alive())
 
     def test_disconnect_clears_fix_before_reconnect(self):
         for failure in (b'', OSError('connection reset')):

@@ -3,11 +3,13 @@ import asyncio
 import copy
 import json
 import ipaddress
+import logging
 import os
 import signal
 import shutil
 import subprocess
 import threading
+from urllib.parse import urlsplit
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,13 +31,18 @@ from adapters.network import Network
 from adapters.recording import Recording
 
 ROOT = Path(__file__).resolve().parent
+logger = logging.getLogger('ovrland')
 FIXTURE = json.loads((ROOT / 'static/mock.json').read_text())
 ambient_light_calibration = AmbientLightCalibration(ROOT / 'config' / 'ambient_light_calibration.json')
 offline_map = OfflineMap(os.environ.get('OVRLAND_MAP_FILE', str(ROOT / 'maps/offline.mbtiles')))
 gps = GPSD(os.environ.get('OVRLAND_GPSD_HOST', '127.0.0.1'),
-           int(os.environ.get('OVRLAND_GPSD_PORT', '2947')))
+           int(os.environ.get('OVRLAND_GPSD_PORT', '2947')),
+           last_location_file=os.environ.get('OVRLAND_LAST_GPS_FILE',
+               str(Path.home() / '.local/state/ovrland/last_gps_location.json')))
 WEATHER_LATITUDE = float(os.environ.get('OVRLAND_WEATHER_LATITUDE', '51.04'))
 WEATHER_LONGITUDE = float(os.environ.get('OVRLAND_WEATHER_LONGITUDE', '-114.07'))
+DEFAULT_LOCATION_NAME = os.environ.get('OVRLAND_DEFAULT_LOCATION_NAME', 'Calgary').strip() or 'Configured location'
+STOP_REQUEST_FILE = Path.home() / '.local/state/ovrland/stop-requested'
 weather = Weather(WEATHER_LATITUDE, WEATHER_LONGITUDE)
 road_conditions = Alberta511(os.environ.get('OVRLAND_511_API_KEY', '').strip(),
                              WEATHER_LATITUDE, WEATHER_LONGITUDE)
@@ -46,8 +53,9 @@ network = Network(
 radio_presets = json.loads((ROOT / 'config' / 'radio_presets.json').read_text())
 radio_catalog = RadioCatalog(radio_presets)
 radio_metadata = RadioMetadata(radio_presets)
-recordings = Recording(os.environ.get(
-    'OVRLAND_RECORDING_DIR', str(Path.home() / '.local/state/ovrland/recordings')))
+recordings = Recording(
+    os.environ.get('OVRLAND_RECORDING_DIR', str(Path.home() / '.local/state/ovrland/recordings')),
+    min_free_bytes=int(os.environ.get('OVRLAND_RECORDING_MIN_FREE_BYTES', 256 * 1024 * 1024)))
 MODE = os.environ.get('OVRLAND_MODE', 'live')
 if MODE not in ('mock', 'live'):
     raise ValueError('OVRLAND_MODE must be mock or live')
@@ -75,13 +83,40 @@ def power_off_pi():
         process = subprocess.Popen(args, start_new_session=True, close_fds=True)
     except OSError:
         return False
-    # A poweroff command normally remains running briefly while the host shuts
-    # down. Detect immediate command failures without waiting on the shutdown.
-    return process.poll() in (None, 0)
+    try:
+        return process.wait(timeout=.75) == 0
+    except subprocess.TimeoutExpired:
+        # The OS has accepted the request; a pending shutdown must not block
+        # the dashboard indefinitely.
+        return True
+
+
+def is_local_host_header(value):
+    try:
+        parsed = urlsplit(f'//{value}')
+        hostname = parsed.hostname
+        parsed.port  # Validate the port spelling/range as part of the Host field.
+    except ValueError:
+        return False
+    return (hostname in ('localhost', '127.0.0.1', '::1')
+            and parsed.username is None and parsed.password is None
+            and not parsed.path and not parsed.query and not parsed.fragment
+            and ',' not in value)
 
 
 def stop_app():
     threading.Timer(.25, lambda: os.kill(os.getpid(), signal.SIGTERM)).start()
+
+
+def request_kiosk_stop():
+    """Notify the desktop launcher to close its owned Chromium window."""
+    try:
+        STOP_REQUEST_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STOP_REQUEST_FILE.touch()
+        return True
+    except OSError:
+        logger.exception('Unable to create the kiosk stop request')
+        return False
 
 
 def local_dashboard_request(request):
@@ -118,6 +153,9 @@ async def lifespan(app):
             nano.start()
             gps.start()
             network.start()
+            last_location = gps.snapshot().get('last_location')
+            if last_location:
+                weather.set_location(last_location['latitude'], last_location['longitude'], 'last_gps')
             weather.start()
             road_conditions.start()
         recording_task = asyncio.create_task(recording_sampler())
@@ -129,16 +167,36 @@ async def lifespan(app):
                 await recording_task
             except asyncio.CancelledError:
                 pass
-        await asyncio.to_thread(recordings.stop, 'app_shutdown')
+        try:
+            await asyncio.to_thread(recordings.stop, 'app_shutdown')
+        except Exception:
+            logger.exception('Recorder cleanup failed during shutdown')
         if MODE == 'live':
-            network.stop()
-            gps.stop()
-            nano.stop()
-            road_conditions.stop()
-            weather.stop()
+            for adapter in (network, gps, nano, road_conditions, weather):
+                try:
+                    await asyncio.to_thread(adapter.stop)
+                except Exception:
+                    logger.exception('Adapter cleanup failed: %s', type(adapter).__name__)
 
 
 app = FastAPI(title='OVRLand', docs_url=None, redoc_url=None, lifespan=lifespan)
+
+
+@app.middleware('http')
+async def local_host_and_frame_policy(request: Request, call_next):
+    """Reject non-local Host headers and prevent the dashboard from framing."""
+    if not is_local_host_header(request.headers.get('host', '')):
+        return Response(status_code=421, content='Local host required')
+    response = await call_next(request)
+    if request.url.path in ('/', '/static/index.html'):
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
+        response.headers['X-Frame-Options'] = 'DENY'
+    return response
+
+
+@app.get('/healthz')
+async def healthz():
+    return {'status': 'ok'}
 
 
 def snapshot():
@@ -164,7 +222,9 @@ def snapshot():
         data['environment'] = sample['environment']
         data['attitude'] = sample['attitude']
         data['imu'] = sample['imu']
-        data['joystick'] = sample['joystick']
+        # BLE remains available for sensor telemetry, but an unauthenticated
+        # advertisement must never gain dashboard navigation or system control.
+        data['joystick'] = sample['joystick'] if NANO_TRANSPORT == 'usb' else None
         data['nano']['received_at'] = sample['received_at']
         # Barometric estimate, not a GPS altitude; the UI labels its source.
         data['location']['altitude_m'] = sample['environment']['altitude_m']
@@ -182,10 +242,19 @@ def snapshot():
         weather.set_location(fix['latitude'], fix['longitude'], 'gps')
         road_conditions.set_location(fix['latitude'], fix['longitude'], 'gps')
     else:
-        weather.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
-        road_conditions.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
+        last_location = gps_reading.get('last_location')
+        if last_location:
+            weather.set_location(last_location['latitude'], last_location['longitude'], 'last_gps')
+            road_conditions.set_location(last_location['latitude'], last_location['longitude'], 'last_gps')
+        else:
+            weather.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
+            road_conditions.set_location(WEATHER_LATITUDE, WEATHER_LONGITUDE, 'default')
     data['weather'] = weather.snapshot()
     data['road_conditions'] = road_conditions.snapshot()
+    if data['road_conditions'].get('location_source') == 'default':
+        data['road_conditions']['location_name'] = DEFAULT_LOCATION_NAME
+    elif data['road_conditions'].get('location_source') == 'last_gps':
+        data['road_conditions']['location_name'] = 'LAST GPS LOCATION'
     data['sources'].update({'weather': data['weather']['status'],
                             'road_conditions': data['road_conditions']['status']})
     return data
@@ -199,7 +268,10 @@ async def recording_sampler():
                 telemetry = snapshot()
                 await asyncio.to_thread(recordings.append, telemetry)
             except Exception as error:
-                await asyncio.to_thread(recordings.fail, error)
+                try:
+                    await asyncio.to_thread(recordings.fail, error)
+                except Exception:
+                    logger.exception('Recorder failure cleanup did not complete')
         await asyncio.sleep(.2)
 
 
@@ -253,12 +325,69 @@ def recording_stop(request: Request):
 
 
 @app.get('/api/recordings/{recording_id}/log')
-def recording_log(recording_id: str):
-    path = recordings.log_path(recording_id)
-    if path is None:
+def recording_log(recording_id: str, check: bool = False):
+    try:
+        result = recordings.log_snapshot(recording_id)
+    except OSError:
+        return Response(content='Unable to export recording', status_code=503)
+    if result is None:
         return Response(status_code=404)
-    return FileResponse(path, media_type='application/x-ndjson',
-                        filename=f'ovrland-{recording_id}.jsonl')
+    content, boundary = result
+    if check:
+        content.close()
+        return {'ready': True, 'bytes': boundary}
+
+    async def chunks():
+        remaining = boundary
+        try:
+            while remaining:
+                chunk = await asyncio.to_thread(content.read, min(64 * 1024, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+        finally:
+            await asyncio.to_thread(content.close)
+
+    async def close_stream():
+        await asyncio.to_thread(content.close)
+
+    return StreamingResponse(chunks(), background=BackgroundTask(close_stream),
+                             media_type='application/x-ndjson', headers={
+        'Content-Disposition': f'attachment; filename="ovrland-{recording_id}.jsonl"',
+        'Content-Length': str(boundary),
+    })
+
+
+@app.get('/api/recordings/export-all.zip')
+def recording_export_all(check: bool = False):
+    if check:
+        try:
+            ready = recordings.check_export()
+        except OSError:
+            return Response(content='Insufficient space or another export is active', status_code=503)
+        return {'ready': ready}
+    try:
+        content = recordings.export_all()
+    except OSError:
+        return Response(content='Unable to export recordings', status_code=503)
+    if content is None:
+        return Response(status_code=404)
+
+    async def chunks():
+        try:
+            while chunk := await asyncio.to_thread(content.read, 64 * 1024):
+                yield chunk
+        finally:
+            await asyncio.to_thread(content.close)
+
+    async def close_stream():
+        await asyncio.to_thread(content.close)
+
+    return StreamingResponse(chunks(), background=BackgroundTask(close_stream),
+                             media_type='application/zip', headers={
+        'Content-Disposition': 'attachment; filename="ovrland-recordings.zip"',
+    })
 
 
 @app.get('/api/recordings/{recording_id}/gps-track.gpx')
@@ -270,14 +399,17 @@ def recording_gps_track(recording_id: str):
     if content is None:
         return Response(status_code=404)
 
-    def chunks():
+    async def chunks():
         try:
-            while chunk := content.read(64 * 1024):
+            while chunk := await asyncio.to_thread(content.read, 64 * 1024):
                 yield chunk
         finally:
-            content.close()
+            await asyncio.to_thread(content.close)
 
-    return StreamingResponse(chunks(), background=BackgroundTask(content.close),
+    async def close_stream():
+        await asyncio.to_thread(content.close)
+
+    return StreamingResponse(chunks(), background=BackgroundTask(close_stream),
                              media_type='application/gpx+xml', headers={
         'Content-Disposition': f'attachment; filename="ovrland-{recording_id}-gps-track.gpx"',
     })
@@ -312,9 +444,11 @@ async def system_action(action: str, request: Request):
     if MODE != 'live':
         return {'status': 'simulated', 'action': action}
     if action == 'stop-app':
+        if not request_kiosk_stop():
+            return Response(status_code=503)
         stop_app()
         return {'status': 'stopping', 'action': action}
-    return ({'status': 'powering-off', 'action': action} if power_off_pi()
+    return ({'status': 'powering-off', 'action': action} if await asyncio.to_thread(power_off_pi)
             else Response(status_code=503))
 
 
@@ -350,6 +484,22 @@ def offline_map_tile(z: int, x: int, y: int):
 
 @app.websocket('/ws/telemetry')
 async def stream(ws: WebSocket):
+    try:
+        peer = ipaddress.ip_address(ws.client.host) if ws.client else None
+    except ValueError:
+        peer = None
+    host = ws.headers.get('host', '')
+    scheme = 'https' if ws.url.scheme in ('https', 'wss') else 'http'
+    try:
+        host_ok = ws.url.hostname in ('localhost', '127.0.0.1', '::1')
+    except ValueError:
+        host_ok = False
+    origin_ok = ws.headers.getlist('origin') == [f'{scheme}://{host}']
+    if (peer is None or not peer.is_loopback
+            or not host_ok or not is_local_host_header(host)
+            or not origin_ok):
+        await ws.close(code=1008)
+        return
     await ws.accept()
     try:
         while True:

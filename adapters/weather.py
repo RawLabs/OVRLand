@@ -50,6 +50,8 @@ class Weather:
                      or abs(self._refresh_longitude - longitude) > .03)
             self.latitude, self.longitude = latitude, longitude
             self.location_source = source
+            if moved and self.state.get('status') == 'live':
+                self.state = {**self.state, 'status': 'stale'}
         if moved:
             self.refresh_event.set()
 
@@ -174,9 +176,21 @@ class Weather:
             if _valid_location(latitude, longitude):
                 try:
                     result = self._fetch(latitude, longitude, source)
+                    discarded = False
                     with self.lock:
-                        if (latitude, longitude, source) == (self.latitude, self.longitude, self.location_source):
+                        same_source = source == self.location_source
+                        within_refresh_distance = (
+                            abs(latitude - self.latitude) <= .03
+                            and abs(longitude - self.longitude) <= .03)
+                        if same_source and within_refresh_distance:
                             self.state = result
+                        else:
+                            discarded = True
+                            self.state = {**self.state, 'status': 'stale'}
+                    if discarded:
+                        # The request became materially out of date while it was
+                        # in flight. Wake the worker to fetch the latest place.
+                        self.refresh_event.set()
                 except Exception:
                     with self.lock:
                         previous = self.state
