@@ -7,6 +7,10 @@ OVRLand is a Raspberry Pi vehicle dashboard for overlanding, with live sensor
 telemetry, GPS maps, weather and road conditions, internet radio, and trip
 recording. Touch and joystick controls support Drive, Adventure, and Camp use.
 
+![OVRLand running in a custom enclosure mounted beside the truck's center console](media/images/ovrland-in-truck.jpg)
+
+*An early OVRLand installation in the truck. The interface continues to evolve.*
+
 The app is in pre-beta development. GPS and recording are implemented; OBD and
 route calculation are not. See the hardware and verification notes below before
 setting up a vehicle installation.
