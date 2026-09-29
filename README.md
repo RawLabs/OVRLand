@@ -64,6 +64,13 @@ Map attribution is retained in the screenshots: © OpenStreetMap contributors.
 *The joystick and Sense module on the bench. Directional movement and a center
 click provide physical dashboard controls alongside the touchscreen.*
 
+### On the development bench
+
+![OVRLand display, joystick and sensor enclosure, and Raspberry Pi connected on the development bench](media/images/ovrland-development-bench.jpg)
+
+*Screen, joystick, and Raspberry Pi together during development. This photo shows
+an earlier interface; the demo screenshots above show the current layout.*
+
 ## Run
 Python/FastAPI + WebSocket + vanilla HTML/CSS/JS. No frontend build; map controls
 and theme assets are bundled locally. Online map tiles require internet.
