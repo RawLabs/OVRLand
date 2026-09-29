@@ -1,4 +1,4 @@
-# Development checkpoint — 2026-09-23
+# Development checkpoint
 
 OVRLand — Operational Vehicle Readout.
 Location • Awareness • Navigation • Discovery.
@@ -27,26 +27,16 @@ Location • Awareness • Navigation • Discovery.
 
 ## Repair verification
 
-The current repair register, verification limits, and owner-ready acceptance
-queue are in the [pre-beta health check](pre-beta-health-check.md). The register
-has code changes for the reviewed tasks, but this tree is not signed off for
-beta: browser acceptance on Chromium, target-Pi operation, and the clean release
-validation run remain open. The working tree is dirty, so its changes are not
-yet tied to a clean candidate revision.
+The repair register, verification limits, and acceptance queue are in the
+[pre-beta health check](pre-beta-health-check.md). The project is published at
+[RawLabs/OVRLand](https://github.com/RawLabs/OVRLand). Automated validation passed
+for published checkpoint `f0183cd` in
+[GitHub Actions](https://github.com/RawLabs/OVRLand/actions/runs/36527242889).
 
-## Earlier bench evidence
-- Real Nano stream: initial sample measured 4.9 Hz, with 38 valid JSON messages and
-  no parse errors. API delivery frequency is separate from hardware sample rate.
-- The Python suite passes coverage for sensor normalization, joystick state,
-  USB fragmentation/disconnect, BLE packet decoding, offline maps, system endpoints,
-  frontend wiring, and exclusion of mock GPS/OBD data from live mode.
-- Running HTTP routes, static assets and WebSocket delivered live Nano data.
-- Isolated Chromium rendering with an actual API snapshot passed 1280×800 fit,
-  390-pixel phone width, mode buttons and injected joystick selection.
-
-Full headless browser navigation stalled on this Pi. The isolated render check
-bypasses browser networking; it is not a full end-to-end browser test. Physical
-joystick feel, touch controls, and on-screen live updates still need user review.
+The project remains pre-beta. Full browser acceptance and installed-Pi testing
+remain open, including physical joystick/touch behavior, live sensor updates,
+startup/recovery, long recording/export, and controlled power-cut durability.
+Mock screenshots demonstrate the interface; they do not close these gates.
 
 ## Limits and next steps
 1. Complete the browser and target-device acceptance tasks in the pre-beta health check.
@@ -66,5 +56,3 @@ Run and optional kiosk-install instructions are in ../README.md. The checked-in
 per-user systemd/autostart templates can launch the service and Chromium at login.
 Do not run multiple workers/readers against the same Nano.
 Hardware is enabled by default. Use `OVRLAND_MODE=mock` for a simulated preview.
-
-Checkpoint is local Git history; no remote publication is configured by this task.

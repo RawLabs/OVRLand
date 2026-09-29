@@ -1,14 +1,14 @@
-# Pre-beta health check — 2026-09-29
+# Pre-beta health check
 
 ## Release assessment
 
-The working tree contains the code changes for the reviewed repair register and
-adds validation tooling, CI, and operational guidance. This is a **pre-beta
-candidate, not a beta sign-off**: browser interaction on Chromium and acceptance
-on the installed Pi have not been run in this environment. The checked-in tree
-also has pre-existing local changes and has not been recorded as a clean
-candidate commit. Keep release status open until the acceptance tasks below are
-complete and the result is tied to a commit.
+The repair changes, validation tooling, CI, and operational guidance are
+committed and published at [RawLabs/OVRLand](https://github.com/RawLabs/OVRLand).
+Automated validation passed for published checkpoint `f0183cd` in
+[GitHub Actions](https://github.com/RawLabs/OVRLand/actions/runs/36527242889).
+The project remains **pre-beta**: full browser interaction acceptance and
+installed-Pi acceptance are outstanding. Keep release status open until the
+tasks below are complete and their results identify the tested commit.
 
 The register below is organized into 22 dispatchable tasks. R01–R09 retain the
 original review identifiers in [the app review](app-review-2026-09-23.md). R10–R22
@@ -36,31 +36,27 @@ this pass.
 | R15 | P1 | Restrict browser controls and WebSocket connections to loopback with validated Host and exact same-origin checks; add security response headers. | Implemented; hostile-origin/Host tests present. |
 | R16 | P1 | Bound poweroff wait and move slow adapter shutdown off the server event loop; protect sampler and adapter cleanup; signal the kiosk to close on an intentional app stop. | Implemented; shutdown and launcher signal tests pass. Actual poweroff intentionally not exercised. |
 | R17 | P2 | Make kiosk install/recovery predictable: validate prerequisites, render paths safely, install a recovery menu item, and keep Chromium open during transient health failures. | Implemented; installer tests cover paths with spaces and missing prerequisites. Pi install check remains part of R19. |
-| R18 | P1 | Run browser smoke, viewport, navigation, stale-feed, popup, hold-cancel, and readability acceptance; repair any failures. | Tooling implemented in `scripts/check_live.py` and `scripts/readability_audit.py`; **not run** because Chromium is unavailable here. Assign to browser/Pi test owner. |
-| R19 | P0 | Complete installed-device acceptance: screen and viewport, joystick/touch, Nano/GPS/BLE, configured feeds, long recording/export, reboot and power-cut recovery, and Pi responsiveness. | **Open.** No serial, GPIO, or gpsd device/socket is exposed in this environment. Requires the target Pi, display, peripherals, and representative storage. |
-| R20 | P1 | Establish repeatable CI, run the full validation gate, audit the pinned Python dependencies, and record a clean candidate revision. | CI and `scripts/validate.sh` added. Full validation passes; `pip-audit` found no known vulnerabilities in `requirements.lock.txt` on 2026-09-29. **Partial:** create a clean candidate revision after reviewing the dirty tree. |
+| R18 | P1 | Run browser smoke, viewport, navigation, stale-feed, popup, hold-cancel, and readability acceptance; repair any failures. | **Open.** Tooling is available in `scripts/check_live.py` and `scripts/readability_audit.py`. Mock screenshot capture does not complete the browser acceptance checklist. |
+| R19 | P0 | Complete installed-device acceptance: screen and viewport, joystick/touch, Nano/GPS/BLE, configured feeds, long recording/export, reboot and power-cut recovery, and Pi responsiveness. | **Open.** Requires the target Pi, display, peripherals, and representative storage. |
+| R20 | P1 | Establish repeatable CI, run the full validation gate, audit the pinned Python dependencies, and record a clean candidate revision. | Published checkpoint `f0183cd` passes CI. The pinned dependency audit is recorded below. **Partial:** attach R18/R19 acceptance evidence to the final tested candidate and rerun validation if fixes change it. |
 | R21 | P2 | Verify radio track-metadata error handling and ensure playback metadata failures do not leave stale track claims. | Implemented; Node regression test added. |
 | R22 | P2 | Confirm installation, operator controls, recovery steps, and supported/deferred capabilities are described consistently for handoff. | README and controls guide updated; final Pi walkthrough is part of R19. |
 
 ## Verification evidence
 
-- `rtk scripts/validate.sh` completed successfully outside the sandbox:
-  **96 Python tests and 84 subtests passed**, all **14 Node tests passed**, and
-  Python compilation, JavaScript syntax, and shell syntax checks passed. The
-  sandbox stalls on asyncio thread-wakeup tests, so the complete gate was run
-  outside it. GitHub Actions runs the same validation script on Ubuntu 24.04
+- Published revision: `f0183cd1206c8523ebb722c42733ab934ac5a3e9`.
+  [GitHub Actions validation](https://github.com/RawLabs/OVRLand/actions/runs/36527242889)
+  passed `scripts/validate.sh`, which runs Python tests and compilation,
+  JavaScript syntax and Node tests, and shell syntax checks on Ubuntu 24.04
   with Python 3.12 and Node 22.
 - `pip-audit 2.10.1` checked the committed dependency lock at SHA-256
   `484414ea3e7239b35d2d76b567b459d77984d634f2444519b1cbd8bb2cbb82fd` and
   reported no known vulnerabilities. This is a point-in-time result for those
   locked dependencies, not a general security certification.
-- Base revision inspected: `24922afdb7b49cf7e9fd4fabf1adb9eef4bacbe0`.
-  The working tree is dirty and includes existing local edits as well as this
-  repair pass; no commit or tag was created.
-- Chromium/Chromium Browser, `/dev/serial/by-id`, `/dev/ttyACM0`,
-  `/dev/gpiochip0`, and `/dev/gpsd.sock` are unavailable here. No browser,
-  physical-control, real-provider, Pi-load, clean-reboot, or power-cut result is
-  claimed.
+- README demo screenshots were captured from the app in Chromium with mock
+  telemetry. They demonstrate layout only. Full browser acceptance,
+  physical-control, real-provider, Pi-load, clean-reboot, and power-cut results
+  remain required under R18/R19.
 
 ## Assignment queue
 
@@ -76,10 +72,10 @@ this pass.
    and sensors, weather/road configuration, long recording/export on target
    media, and clean reboot. Do a controlled power-cut/recovery test only on
    disposable test data and record what survives.
-3. **Release owner — R20:** review the complete diff while preserving existing
-   local changes, then produce a clean candidate revision and attach the
-   validation and audit evidence. Keep the status at pre-beta until R18–R20 are
-   closed.
+3. **Release owner — R20:** record the final tested candidate commit and attach
+   the browser, hardware, validation, and dependency-audit evidence. If
+   acceptance fixes change the candidate, rerun the affected acceptance checks
+   and automated validation. Keep the status at pre-beta until R18–R20 are closed.
 
 ## Decisions captured in code
 
