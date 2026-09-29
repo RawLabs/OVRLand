@@ -1,6 +1,8 @@
 import os
+import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,7 +26,7 @@ class KioskInstallerTests(unittest.TestCase):
             for template in ('ovrland.service.in', 'ovrland-kiosk.desktop.in', 'ovrland.desktop.in'):
                 shutil.copy(ROOT / 'deploy' / template, repo / 'deploy' / template)
             python = repo / '.venv/bin/python'
-            python.write_text(f'#!/bin/sh\nexec "{ROOT}/.venv/bin/python" "$@"\n')
+            python.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} "$@"\n')
             python.chmod(0o755)
             for command in ('wmctrl', 'chromium', 'systemctl'):
                 stub = stub_bin / command
