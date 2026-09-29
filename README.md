@@ -292,3 +292,19 @@ by default. See [offline map setup](maps/README.md). Leaflet 1.9.4 is bundled lo
 (with its license and official JS/CSS checksums verified), so offline map controls
 do not require a CDN. OSM tiles are not prefetched or bulk-downloaded. No route
 calculation is implemented by these map controls.
+
+## License
+
+OVRLand's source code and documentation are licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 RawLabs.
+
+Images and audio under `media/`, plus `static/assets/brand-reference.png`, are
+covered separately by the [artwork and media terms](ASSET-LICENSE.md). These
+terms allow the assets to ship with OVRLand and clearly identified unofficial
+versions, while reserving standalone reuse and branding rights. CSS, JSON, and
+Markdown files in `media/`, and `static/assets/contours.svg`, remain under MIT.
+
+Third-party components retain their own licenses, including the bundled
+[Leaflet BSD 2-Clause license](static/vendor/leaflet/LICENSE). External map,
+weather, and radio services retain their own terms; the repository licenses do
+not grant rights to their content.

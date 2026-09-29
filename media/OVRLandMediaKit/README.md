@@ -1,5 +1,8 @@
 # OVRLand — Final Media Kit
 
+Images in this kit are covered by the [artwork and media terms](../../ASSET-LICENSE.md),
+not the code's MIT license. The CSS, JSON, and Markdown files remain under MIT.
+
 **Operational Vehicle Readout**
 
 **Tagline:** Your vehicle. Your bearings. Your basecamp.
