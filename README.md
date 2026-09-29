@@ -57,6 +57,13 @@ Map attribution is retained in the screenshots: © OpenStreetMap contributors.
 
 *An early OVRLand installation in the truck. The interface continues to evolve.*
 
+### Joystick and sensor module
+
+![OVRLand joystick and sensor module in its custom enclosure, with the board visible through the front and USB connected](media/images/ovrland-joystick-sense.jpg)
+
+*The joystick and Sense module on the bench. Directional movement and a center
+click provide physical dashboard controls alongside the touchscreen.*
+
 ## Run
 Python/FastAPI + WebSocket + vanilla HTML/CSS/JS. No frontend build; map controls
 and theme assets are bundled locally. Online map tiles require internet.
