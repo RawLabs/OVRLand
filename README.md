@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="media/OVRLandMediaKit/logos/OVRLand_Primary_Lockup_Dark.png" alt="OVRLand — Your vehicle. Your bearings. Your basecamp." width="560">
+</p>
+
 # OVRLand
 Operational Vehicle Readout — Location • Awareness • Navigation • Discovery.
 
@@ -7,13 +11,51 @@ OVRLand is a Raspberry Pi vehicle dashboard for overlanding, with live sensor
 telemetry, GPS maps, weather and road conditions, internet radio, and trip
 recording. Touch and joystick controls support Drive, Adventure, and Camp use.
 
-![OVRLand running in a custom enclosure mounted beside the truck's center console](media/images/ovrland-in-truck.jpg)
+![OVRLand wallpaper showing an expedition vehicle overlooking a mountain lake at sunset](media/OVRLandMediaKit/wallpapers/OVRLandOfficialWallpaper.png)
 
-*An early OVRLand installation in the truck. The interface continues to evolve.*
+[Download the wallpaper](media/OVRLandMediaKit/wallpapers/OVRLandOfficialWallpaper.png)
+· [Explore the logo and media kit](media/OVRLandMediaKit/README.md)
+· [Run the app](#run)
 
 The app is in pre-beta development. GPS and recording are implemented; OBD and
 route calculation are not. See the hardware and verification notes below before
 setting up a vehicle installation.
+
+## Demo screens
+
+Captured from the actual app at 1280 × 800 in mock mode. Sensor, GPS, weather,
+road, and vehicle readings are simulated; live OBD support is still planned.
+The maps show the demo location, not the truck's position.
+
+### Drive
+
+Map, weather, vehicle attitude, and the vehicle readout in one dashboard.
+
+![OVRLand Drive dashboard with simulated telemetry and a map of the demo location](media/images/demo-drive.png)
+
+<details>
+<summary>Adventure — field instruments and location</summary>
+
+![OVRLand Adventure dashboard with simulated pitch, roll, altitude, and GPS coordinates](media/images/demo-adventure.png)
+
+</details>
+
+<details>
+<summary>OVRadio — music screen</summary>
+
+![OVRLand music screen waiting for an internet radio station to be selected](media/images/demo-music.png)
+
+Radio is idle in this capture. Spotify is an optional portal; its player is not configured.
+
+</details>
+
+Map attribution is retained in the screenshots: © OpenStreetMap contributors.
+
+## In the truck
+
+![OVRLand running in a custom enclosure mounted beside the truck's center console](media/images/ovrland-in-truck.jpg)
+
+*An early OVRLand installation in the truck. The interface continues to evolve.*
 
 ## Run
 Python/FastAPI + WebSocket + vanilla HTML/CSS/JS. No frontend build; map controls
